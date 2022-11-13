@@ -202,8 +202,16 @@ private:
 
 using HashItem = std::variant<TNT, const char*, Vec>;
 struct Hash {
-    Hash() {}
+    Hash() {
+        target_ = 0;
+    }
     ~Hash() {}
+
+    void inc() {
+        std::map<const char*, HashItem> new_map;
+        maps_.push_back( new_map );
+    }
+
 private:
     std::vector< std::map<const char*, HashItem> > maps_;
     size_t target_;
@@ -254,17 +262,29 @@ struct WordCode {
 };
 
 struct WordByte {
-    enum {
+    const enum _WordByteType_ {
         Number,
         String,
         GetOperator,
+        StaticGetOperator,
         SetOperator,
+        StaticSetOperator,
         Native,
         User,
     } type_;
-    size_t idx_;
-};
 
+    size_t idx_;
+    TNT num_;
+
+    WordByte(_WordByteType_ t, size_t i): type_(t) {
+        idx_ = i;
+    }
+    WordByte(TNT num) : type_(Number) {
+        num_ = num;
+    }
+    WordByte(_WordByteType_ t): type_(t) {
+    }
+};
 
 // Envrioment
 struct Enviroment;
@@ -613,14 +633,105 @@ private:
         return main_code;
     }
 
+    NativeWord* create_native(const std::string& name) {
+        if ( native_words_.find(name) != native_words_.end() ) {
+            return native_words_[name](*this);
+        }
+        lupu_panic("Call a un registered native word!");
+        return nullptr;
+    }
+
+    UserWord& get_user(const std::string& name) {
+        if ( user_words_.find(name) != user_words_.end() ) {
+            return user_words_[name];
+        }
+        lupu_panic("Call a un registered native word!");
+    }
+
 private:
     std::map<std::string, UserWord> user_words_;
     std::map<std::string, NativeCreator*> native_words_;
     std::map<std::string, SettingValue> settings_;
+
+    friend struct Runtime;
 };
 
 struct Runtime {
+    Runtime() = delete;
+    Runtime(Enviroment& env, UserWord& main_code) {
+        linking(env, main_code);
+    }
 
+private:
+    void linking(Enviroment& env, UserWord& word) {
+        size_t bin_id = binaries.size();
+        binaries.push_back( UserBinary() );
+
+        hash.inc();
+
+        UserBinary bin;
+        for(size_t i = 0; i < word.size(); i++) {
+            auto code = word[i];
+            switch( code.type_ ) {
+                case WordCode::Number :
+                    bin.push_back( WordByte( code.num_ ) );
+                    break;
+
+                case WordCode::String :
+                    bin.push_back( WordByte( WordByte::String, string_id( code.str_ ) ) );
+                    break;
+
+                case WordCode::Builtin :
+                    if ( code.str_ == "@" ) {
+                        bin.push_back( WordByte(WordByte::GetOperator) );
+                    } else if ( code.str_ == "@~" ) {
+                        bin.push_back( WordByte(WordByte::StaticGetOperator) );
+                    } else if ( code.str_ == "!" ) {
+                        bin.push_back( WordByte(WordByte::SetOperator) );
+                    } else if ( code.str_ == "!~" ) {
+                        bin.push_back( WordByte(WordByte::StaticSetOperator) );
+                    } else {
+                        lupu_panic("Find an unsupoorted builtin operator!");
+                    }
+                    break;
+
+                case WordCode::Native :
+                    bin.push_back( WordByte(WordByte::Native, natives.size() ));
+                    natives.push_back( env.create_native(code.str_));
+                    break;
+
+                case WordCode::User :
+                    bin.push_back( WordByte(WordByte::User, binaries.size() ));
+                    UserWord& new_word = env.get_user( code.str_ );
+                    linking(env, new_word);
+                    break;
+            }
+        }
+
+        binaries[bin_id] = bin;
+    }
+
+    size_t string_id(const std::string& str) {
+        for (size_t i = 0; i < strings.size(); i++) {
+            if ( strings[i] == str ) {
+                return i;
+            }
+        }
+        size_t ret = strings.size();
+        strings.push_back( str );
+        return ret;
+    }
+
+private:
+    Stack stack;
+    Hash hash;
+
+    // resource
+    std::vector<std::string> strings;
+    std::vector<UserBinary> binaries;
+    std::vector<NativeWord*> natives;
+
+    friend struct Enviroment;
 };
 
 } // end of namespace
