@@ -95,7 +95,6 @@ struct Cell {
     }
 };
 
-
 // Stack & Hash
 struct Stack {
     Stack() {}
@@ -193,27 +192,72 @@ struct Stack {
     }
 
 private:
+    void push(Cell cell) {
+        data_.push_back(cell);
+    }
     void push_string(const char* str) {
         data_.push_back( Cell(str) );
     }
 
     std::vector< Cell> data_;
+    friend struct Runtime;
 };
 
-using HashItem = std::variant<TNT, const char*, Vec>;
 struct Hash {
+    using Item = std::variant<TNT, const char*, Vec>;
     Hash() {
         target_ = 0;
     }
     ~Hash() {}
 
     void inc() {
-        std::map<const char*, HashItem> new_map;
+        std::map<const char*, Item> new_map;
         maps_.push_back( new_map );
     }
 
+    void moveto(size_t i) {
+        if ( i >= maps_.size() ) {
+            lupu_panic("Can't find target hash!");
+        }
+        target_ = i;
+    }
+
+    Item find(const char* name) {
+        if ( maps_[target_].find(name) == maps_[target_].end() ) {
+            lupu_panic("Can't find value for name!");
+        }
+        return maps_[target_][name];
+    }
+
+    void set(const char* name, Item item) {
+        maps_[target_][name] = std::move(item);
+    }
+
+    static Cell Item2Cell( Item* item ) {
+        if ( item->index() == 0 ) {
+            return Cell( std::get<0>(*item) );
+        } else if ( item->index() == 1 ) {
+            return Cell( std::get<1>(*item) );
+        }
+        Vec* vec = & std::get<2>(*item);
+        return Cell(vec);
+    }
+
+    static Item Cell2Item( Cell& cell ) {
+        Item ret;
+        if ( cell.type_ == Cell::T_Number ) {
+            ret = cell.v._num;
+        } else if ( cell.type_ == Cell::T_String ) {
+            ret = cell.v._str;
+        } else {
+            ret = *cell.v._vec;
+        }
+
+        return ret;
+    }
+
 private:
-    std::vector< std::map<const char*, HashItem> > maps_;
+    std::vector< std::map<const char*, Item> > maps_;
     size_t target_;
 };
 
@@ -265,10 +309,7 @@ struct WordByte {
     const enum _WordByteType_ {
         Number,
         String,
-        GetOperator,
-        StaticGetOperator,
-        SetOperator,
-        StaticSetOperator,
+        BuiltinOperator,
         Native,
         User,
     } type_;
@@ -291,6 +332,9 @@ struct Enviroment;
 struct Runtime;
 struct NativeWord {
     virtual void run(Stack& stack) = 0;
+};
+struct BuiltinOperator {
+    virtual void run(Stack& stack, Hash& hash) = 0;
 };
 using NativeCreator = NativeWord* (Enviroment&);
 using UserWord = std::vector<WordCode>;
@@ -656,13 +700,48 @@ private:
     friend struct Runtime;
 };
 
+
 struct Runtime {
+public:
     Runtime() = delete;
     Runtime(Enviroment& env, UserWord& main_code) {
         linking(env, main_code);
     }
-
+    void run() {
+        run_(0);
+    }
 private:
+    void run_(size_t from) {
+        hash.moveto(from);
+        for ( size_t i = 0; i < binaries[from].size(); i++) {
+            auto byte = binaries[from][i];
+            switch( byte.type_ ) {
+                case WordByte::Number:
+                    stack.push_number( byte.num_ );
+                    break;
+
+                case WordByte::String:
+                    {
+                        const char* str = strings[ byte.idx_ ].c_str();
+                        stack.push_string(str);
+                    }
+                    break;
+
+                case WordByte::BuiltinOperator:
+                    builtins[ byte.idx_ ]->run( stack, hash );
+                    break;
+
+                case WordByte::Native:
+                    natives[ byte.idx_ ]->run( stack );
+                    break;
+
+                case WordByte::User:
+                    run_(from + 1);
+                    break;
+            }
+        }
+    }
+
     void linking(Enviroment& env, UserWord& word) {
         size_t bin_id = binaries.size();
         binaries.push_back( UserBinary() );
@@ -682,16 +761,22 @@ private:
                     break;
 
                 case WordCode::Builtin :
-                    if ( code.str_ == "@" ) {
-                        bin.push_back( WordByte(WordByte::GetOperator) );
-                    } else if ( code.str_ == "@~" ) {
-                        bin.push_back( WordByte(WordByte::StaticGetOperator) );
-                    } else if ( code.str_ == "!" ) {
-                        bin.push_back( WordByte(WordByte::SetOperator) );
-                    } else if ( code.str_ == "!~" ) {
-                        bin.push_back( WordByte(WordByte::StaticSetOperator) );
-                    } else {
-                        lupu_panic("Find an unsupoorted builtin operator!");
+                    {
+                        BuiltinOperator* op = nullptr;
+                        if ( code.str_ == "@" ) {
+                            op = new BuiltinGet();
+                        } else if ( code.str_ == "@~" ) {
+                            op = new BuiltinStaticGet();
+                        } else if ( code.str_ == "!" ) {
+                            op = new BuiltinSet();
+                        } else if ( code.str_ == "!~" ) {
+                            op = new BuiltinStaticSet();
+                        } else {
+                            lupu_panic("Find an unsupoorted builtin operator!");
+                        }
+                        size_t idx = builtins.size();
+                        builtins.push_back(op);
+                        bin.push_back( WordByte( WordByte::BuiltinOperator, idx) );
                     }
                     break;
 
@@ -722,6 +807,60 @@ private:
         return ret;
     }
 
+    struct BuiltinGet : public BuiltinOperator {
+        Hash::Item value;
+        virtual void run(Stack& stack, Hash& hash) {
+            const char* name = stack.pop_string();
+            value = hash.find(name);
+            stack.push( Hash::Item2Cell(&value) );
+        }
+    };
+
+    struct BuiltinStaticGet : public BuiltinOperator {
+        Hash::Item value;
+        bool first;
+        BuiltinStaticGet() {
+            first = false;
+        }
+        virtual void run(Stack& stack, Hash& hash) {
+            if ( first == false) {
+                first = true;
+                const char* name = stack.pop_string();
+                value = hash.find(name);
+                stack.push( Hash::Item2Cell(&value) );
+            }
+            stack.pop_string();
+            stack.push( Hash::Item2Cell(&value) );
+        }
+    };
+
+    struct BuiltinSet : public BuiltinOperator {
+        virtual void run(Stack& stack, Hash& hash) {
+            const char* name = stack.pop_string();
+            Cell cell = stack.pop();
+            hash.set(name, Hash::Cell2Item(cell));
+        }
+    };
+
+    struct BuiltinStaticSet : public BuiltinOperator {
+        bool first;
+        BuiltinStaticSet() {
+            first = false;
+        }
+        virtual void run(Stack& stack, Hash& hash) {
+            if ( first == false) {
+                first = true;
+                const char* name = stack.pop_string();
+                Cell cell = stack.pop();
+                hash.set(name, Hash::Cell2Item(cell));
+                return;
+            }
+            stack.pop_string();
+            stack.pop();
+        }
+    };
+
+
 private:
     Stack stack;
     Hash hash;
@@ -730,8 +869,18 @@ private:
     std::vector<std::string> strings;
     std::vector<UserBinary> binaries;
     std::vector<NativeWord*> natives;
+    std::vector<BuiltinOperator*> builtins;
 
     friend struct Enviroment;
 };
+
+
+Runtime Enviroment::build(const std::string& txt) {
+    auto main_code = compile(txt);
+    Runtime rt(*this, main_code);
+    return rt;
+}
+
+
 
 } // end of namespace
