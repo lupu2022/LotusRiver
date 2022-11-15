@@ -1,3 +1,6 @@
+#ifndef _LUPU_H_
+#define _LUPU_H_
+
 #include <map>
 #include <memory>
 #include <string>
@@ -30,11 +33,10 @@ inline void lupu__M_Panic(const char* file, int line, const char* msg) {
 }
 
 
-using Eigen::MatrixXf;
-
 namespace lupu {
+
 // target number type
-using Vec = MatrixXf;
+using Vec = Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>;
 using TNT = float;
 
 struct Cell {
@@ -85,6 +87,24 @@ struct Cell {
         lupu_assert(type_ == T_Vector, "Cell type can't convert to vector!");
         return v._vec;
     }
+    bool is_number() {
+        if ( type_ == T_Number ) {
+            return true;
+        }
+        return false;
+    }
+    bool is_string() {
+        if ( type_ == T_String ) {
+            return true;
+        }
+        return false;
+    }
+    bool is_vector() {
+        if ( type_ == T_Vector ) {
+            return true;
+        }
+        return false;
+    }
     bool is_null() {
         if ( type_ == T_String ) {
             if (v._str == NULL) {
@@ -107,7 +127,7 @@ struct Stack {
         data_.clear();
     }
 
-    Cell top() {
+    Cell& top() {
         lupu_assert(data_.size() > 0, "Can't access cell from empty stack!");
         return data_.back();
     }
@@ -351,6 +371,8 @@ struct Enviroment {
         SettingValue sv;
         sv._int = sr;
         settings_["SampleRate"] = sv;
+
+        load_base_math();
     }
     ~Enviroment() {}
 
@@ -371,6 +393,7 @@ struct Enviroment {
     Runtime build(const std::string& txt);
 
 private:
+    void load_base_math();
     UserWord compile(const std::string& txt) {
         struct _ {
             static bool parse_number(const std::string& token, TNT& value) {
@@ -875,12 +898,315 @@ private:
 };
 
 
+
+struct StaticNativeWord : public NativeWord {
+    StaticNativeWord() {
+        first = false;
+    }
+    virtual void run(Stack& stack) {
+        if ( first == false ) {
+            first = true;
+            run_first(stack);
+            return;
+        }
+        run_next(stack);
+    }
+    virtual void run_first(Stack& stack) = 0;
+    virtual void run_next(Stack& stack) = 0;
+private:
+    bool first;
+};
+
+#define NWORD_CREATOR_DEFINE_LUPU(CLS)         \
+static NativeWord* creator(Enviroment& env) {   \
+    NativeWord* wd = new CLS();                \
+    return wd;                                 \
+}
+namespace base {
+    struct Drop : public NativeWord {
+        virtual void run(Stack& stack) {
+            stack.drop();
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Drop)
+    };
+
+    struct Dup : public NativeWord {
+        virtual void run(Stack& stack) {
+            stack.dup();
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Dup)
+    };
+
+    struct Dup2 : public NativeWord {
+        virtual void run(Stack& stack) {
+            stack.dup2();
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Dup2)
+    };
+
+    struct Swap : public NativeWord {
+        virtual void run(Stack& stack) {
+            stack.swap();
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Swap)
+    };
+
+    struct Rot : public NativeWord {
+        virtual void run(Stack& stack) {
+            stack.rot();
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Rot)
+    };
+
+    struct Zeros : public StaticNativeWord {
+        virtual void run_first(Stack& stack) {
+            size_t len = stack.pop_number();
+            vec = Vec::Zero(len, 1);
+            stack.push_vector( &vec);
+        }
+        virtual void run_next(Stack& stack) {
+            stack.pop_number();
+            stack.push_vector( &vec);
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Zeros)
+    private:
+        Vec vec;
+    };
+
+    struct Ones : public StaticNativeWord {
+        virtual void run_first(Stack& stack) {
+            size_t len = stack.pop_number();
+            vec = Vec::Ones(len, 1);
+            stack.push_vector( &vec);
+        }
+        virtual void run_next(Stack& stack) {
+            stack.pop_number();
+            stack.push_vector( &vec);
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Ones)
+    private:
+        Vec vec;
+    };
+
+    struct Randoms : public StaticNativeWord {
+        virtual void run_first(Stack& stack) {
+            size_t len = stack.pop_number();
+            vec = Vec::Random(len, 1);
+            stack.push_vector( &vec);
+        }
+        virtual void run_next(Stack& stack) {
+            stack.pop_number();
+            stack.push_vector( &vec);
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Randoms)
+    private:
+        Vec vec;
+    };
+
+    struct Matrix : public StaticNativeWord {
+        virtual void run_first(Stack& stack) {
+            size_t col = stack.pop_number();
+            size_t row = stack.pop_number();
+            vec = Vec::Zero(col, row);
+            stack.push_vector( &vec);
+        }
+        virtual void run_next(Stack& stack) {
+            stack.pop_number();
+            stack.push_vector( &vec);
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Matrix)
+    private:
+        Vec vec;
+    };
+
+}
+
+#define BIN_OP_MATH_WORD_LUPU(CLS, op)              \
+struct CLS : public NativeWord {                    \
+    virtual void run(Stack& stack) {                \
+        if ( stack.top().is_number() ) {            \
+            auto a = stack.pop_number();            \
+            auto b = stack.pop_number();            \
+            stack.push_number( a op b);             \
+            return;                                 \
+        } else if ( stack.top().is_vector() ) {     \
+            auto a = stack.pop_vector();            \
+            if ( stack.top().is_number() ) {        \
+                auto b = stack.pop_number();        \
+                result = *a op b;                   \
+                stack.push_vector(&result);         \
+                return;                             \
+            } else if ( stack.top().is_vector() ) { \
+                auto b = stack.pop_vector();        \
+                result = *a op *b;                  \
+                stack.push_vector(&result);         \
+                return;                             \
+            }                                       \
+        }                                           \
+        lupu_panic("#CLS don't support type!");     \
+    }                                               \
+    static NativeWord* creator(Enviroment& env) {   \
+         NativeWord* wd = new CLS();                \
+         return wd;                                 \
+    }                                               \
+private:                                            \
+    Vec result;                                     \
+}
+
+#define UNI_MATH_WORD_LUPU(CLS, op)                 \
+struct CLS : public NativeWord {                    \
+    virtual void run(Stack& stack) {                \
+        if ( stack.top().is_number() ) {            \
+            auto a = stack.pop_number();            \
+            stack.push_number( std::op(a) );        \
+            return;                                 \
+        } else if ( stack.top().is_vector() ) {     \
+            auto a = stack.pop_vector();            \
+            result = a->op();                       \
+            return;                                 \
+        }                                           \
+        lupu_panic("#CLS don't support type!");     \
+    }                                               \
+    static NativeWord* creator(Enviroment& env) {   \
+         NativeWord* wd = new CLS();                \
+         return wd;                                 \
+    }                                               \
+private:                                            \
+    Vec result;                                     \
+}
+
+
+namespace math {
+    BIN_OP_MATH_WORD_LUPU(Add, +);
+    BIN_OP_MATH_WORD_LUPU(Sub, -);
+    BIN_OP_MATH_WORD_LUPU(Mul, *);
+    BIN_OP_MATH_WORD_LUPU(Div, /);
+
+    UNI_MATH_WORD_LUPU(Abs, abs);
+    UNI_MATH_WORD_LUPU(Arg, arg);
+    UNI_MATH_WORD_LUPU(Exp, exp);
+    UNI_MATH_WORD_LUPU(Log, log);
+    UNI_MATH_WORD_LUPU(Log1p, log1p);
+    UNI_MATH_WORD_LUPU(Log10, log10);
+    UNI_MATH_WORD_LUPU(Sqrt, sqrt);
+
+    UNI_MATH_WORD_LUPU(Sin, sin);
+    UNI_MATH_WORD_LUPU(Cos, cos);
+    UNI_MATH_WORD_LUPU(Tan, tan);
+    UNI_MATH_WORD_LUPU(Asin, asin);
+    UNI_MATH_WORD_LUPU(Acos, acos);
+    UNI_MATH_WORD_LUPU(Atan, atan);
+
+    UNI_MATH_WORD_LUPU(Sinh, sinh);
+    UNI_MATH_WORD_LUPU(Cosh, cosh);
+    UNI_MATH_WORD_LUPU(Tanh, tanh);
+    UNI_MATH_WORD_LUPU(Asinh, asinh);
+    UNI_MATH_WORD_LUPU(Acosh, acosh);
+    UNI_MATH_WORD_LUPU(Atanh, atanh);
+
+    UNI_MATH_WORD_LUPU(Ceil, ceil);
+    UNI_MATH_WORD_LUPU(Floor, floor);
+    UNI_MATH_WORD_LUPU(Round, round);
+
+    struct Mod : public NativeWord {
+        virtual void run(Stack& stack) {
+            auto a = stack.pop_number();
+            auto b = stack.pop_number();
+            stack.push_number( fmod(a, b) );
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Mod)
+    };
+
+    struct Inv : public NativeWord {
+        virtual void run(Stack& stack) {
+            if ( stack.top().is_number() ) {
+                auto a = stack.pop_number();
+                stack.push_number( 1.0 / a );
+                return;
+            }
+            auto a = stack.pop_vector();
+            result = a->inverse();
+            stack.push_vector(&result);
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Inv);
+    private:
+        Vec result;
+    };
+
+    struct Pow : public NativeWord {
+        virtual void run(Stack& stack) {
+            if ( stack.top().is_number() ) {
+                auto a = stack.pop_number();
+                auto b = stack.pop_number();
+                stack.push_number( std::pow(a, b) );
+                return;
+            }
+            auto a = stack.pop_vector();
+            auto b = stack.pop_vector();
+            result = a->pow(*b);
+            stack.push_vector(&result);
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Pow)
+    private:
+        Vec result;
+    };
+
+}
+
+
+void Enviroment::load_base_math() {
+    // base words
+    insert_native_word("drop", base::Drop::creator );
+    insert_native_word("dup", base::Dup::creator );
+    insert_native_word("dup2", base::Dup2::creator );
+    insert_native_word("swap", base::Swap::creator );
+    insert_native_word("rot", base::Rot::creator );
+
+    insert_native_word("zeros~", base::Zeros::creator );
+    insert_native_word("ones~", base::Ones::creator );
+    insert_native_word("randoms~", base::Randoms::creator );
+    insert_native_word("matrix~", base::Matrix::creator );
+
+    // math words
+    insert_native_word("+", math::Add::creator );
+    insert_native_word("-", math::Sub::creator );
+    insert_native_word("*", math::Mul::creator );
+    insert_native_word("/", math::Div::creator );
+    insert_native_word("%", math::Mod::creator );
+
+    insert_native_word("abs", math::Abs::creator );
+    insert_native_word("arg", math::Arg::creator );
+    insert_native_word("exp", math::Exp::creator );
+    insert_native_word("inv", math::Inv::creator );
+    insert_native_word("log", math::Log::creator );
+    insert_native_word("log1p", math::Log1p::creator );
+    insert_native_word("log10", math::Log10::creator );
+    insert_native_word("pow", math::Pow::creator );
+
+    insert_native_word("sin", math::Sin::creator );
+    insert_native_word("cos", math::Cos::creator );
+    insert_native_word("tan", math::Tan::creator );
+    insert_native_word("asin", math::Asin::creator );
+    insert_native_word("acos", math::Acos::creator );
+    insert_native_word("atan", math::Atan::creator );
+
+    insert_native_word("sinh", math::Sinh::creator );
+    insert_native_word("cosh", math::Cosh::creator );
+    insert_native_word("tanh", math::Tanh::creator );
+    insert_native_word("asinh", math::Asinh::creator );
+    insert_native_word("acosh", math::Acosh::creator );
+    insert_native_word("atanh", math::Atanh::creator );
+
+    insert_native_word("ceil", math::Ceil::creator );
+    insert_native_word("floor", math::Floor::creator );
+    insert_native_word("round", math::Round::creator );
+}
+
 Runtime Enviroment::build(const std::string& txt) {
     auto main_code = compile(txt);
     Runtime rt(*this, main_code);
     return rt;
 }
 
-
-
 } // end of namespace
+#endif
