@@ -115,6 +115,7 @@ struct Cell {
     }
 };
 
+
 // Stack & Hash
 struct Stack {
     Stack() {}
@@ -220,6 +221,8 @@ private:
     }
 
     std::vector< Cell> data_;
+
+    friend std::ostream& operator<<(std::ostream& os, Stack& stack);
     friend struct Runtime;
 };
 
@@ -244,6 +247,11 @@ struct Hash {
 
     Item find(const char* name) {
         if ( maps_[target_].find(name) == maps_[target_].end() ) {
+            if ( target_ != 0 ) {
+                if ( maps_[0].find(name) != maps_[0].end() ) {
+                    return maps_[0][name];
+                }
+            }
             lupu_panic("Can't find value for name!");
         }
         return maps_[target_][name];
@@ -376,11 +384,17 @@ struct Enviroment {
     }
     ~Enviroment() {}
 
-    SettingValue query(const std::string& name) {
+    SettingValue query_config(const std::string& name) {
         if (settings_.find(name) == settings_.end() ) {
             lupu_panic("Can't find target in env's settings!");
         }
         return settings_[name];
+    }
+    void set_config(const std::string& name, SettingValue value) {
+        if (settings_.find(name) != settings_.end() ) {
+            lupu_panic("Can't set same target in env's settings!");
+        }
+        settings_[name] = value;
     }
 
     void insert_native_word(const std::string& name, NativeCreator* fn) {
@@ -733,29 +747,34 @@ public:
     void run() {
         run_(0);
     }
+
+    Stack& stack() {
+        return stack_;
+    }
+
 private:
     void run_(size_t from) {
-        hash.moveto(from);
-        for ( size_t i = 0; i < binaries[from].size(); i++) {
-            auto byte = binaries[from][i];
+        hash_.moveto(from);
+        for ( size_t i = 0; i < binaries_[from].size(); i++) {
+            auto byte = binaries_[from][i];
             switch( byte.type_ ) {
                 case WordByte::Number:
-                    stack.push_number( byte.num_ );
+                    stack_.push_number( byte.num_ );
                     break;
 
                 case WordByte::String:
                     {
-                        const char* str = strings[ byte.idx_ ].c_str();
-                        stack.push_string(str);
+                        const char* str = strings_[ byte.idx_ ].c_str();
+                        stack_.push_string(str);
                     }
                     break;
 
                 case WordByte::BuiltinOperator:
-                    builtins[ byte.idx_ ]->run( stack, hash );
+                    builtins_[ byte.idx_ ]->run( stack_, hash_ );
                     break;
 
                 case WordByte::Native:
-                    natives[ byte.idx_ ]->run( stack );
+                    natives_[ byte.idx_ ]->run( stack_ );
                     break;
 
                 case WordByte::User:
@@ -766,12 +785,12 @@ private:
     }
 
     void linking(Enviroment& env, UserWord& word) {
-        size_t bin_id = binaries.size();
-        binaries.push_back( UserBinary() );
+        size_t bin_id = binaries_.size();
+        binaries_.push_back( UserBinary() );
 
-        hash.inc();
-
+        hash_.inc();
         UserBinary bin;
+
         for(size_t i = 0; i < word.size(); i++) {
             auto code = word[i];
             switch( code.type_ ) {
@@ -789,44 +808,44 @@ private:
                         if ( code.str_ == "@" ) {
                             op = new BuiltinGet();
                         } else if ( code.str_ == "@~" ) {
-                            op = new BuiltinStaticGet();
+                            op = new builtins_taticGet();
                         } else if ( code.str_ == "!" ) {
-                            op = new BuiltinSet();
+                            op = new builtins_et();
                         } else if ( code.str_ == "!~" ) {
-                            op = new BuiltinStaticSet();
+                            op = new builtins_taticSet();
                         } else {
                             lupu_panic("Find an unsupoorted builtin operator!");
                         }
-                        size_t idx = builtins.size();
-                        builtins.push_back(op);
+                        size_t idx = builtins_.size();
+                        builtins_.push_back(op);
                         bin.push_back( WordByte( WordByte::BuiltinOperator, idx) );
                     }
                     break;
 
                 case WordCode::Native :
-                    bin.push_back( WordByte(WordByte::Native, natives.size() ));
-                    natives.push_back( env.create_native(code.str_));
+                    bin.push_back( WordByte(WordByte::Native, natives_.size() ));
+                    natives_.push_back( env.create_native(code.str_));
                     break;
 
                 case WordCode::User :
-                    bin.push_back( WordByte(WordByte::User, binaries.size() ));
+                    bin.push_back( WordByte(WordByte::User, binaries_.size() ));
                     UserWord& new_word = env.get_user( code.str_ );
                     linking(env, new_word);
                     break;
             }
         }
 
-        binaries[bin_id] = bin;
+        binaries_[bin_id] = bin;
     }
 
     size_t string_id(const std::string& str) {
-        for (size_t i = 0; i < strings.size(); i++) {
-            if ( strings[i] == str ) {
+        for (size_t i = 0; i < strings_.size(); i++) {
+            if ( strings_[i] == str ) {
                 return i;
             }
         }
-        size_t ret = strings.size();
-        strings.push_back( str );
+        size_t ret = strings_.size();
+        strings_.push_back( str );
         return ret;
     }
 
@@ -839,10 +858,10 @@ private:
         }
     };
 
-    struct BuiltinStaticGet : public BuiltinOperator {
+    struct builtins_taticGet : public BuiltinOperator {
         Hash::Item value;
         bool first;
-        BuiltinStaticGet() {
+        builtins_taticGet() {
             first = false;
         }
         virtual void run(Stack& stack, Hash& hash) {
@@ -857,7 +876,7 @@ private:
         }
     };
 
-    struct BuiltinSet : public BuiltinOperator {
+    struct builtins_et : public BuiltinOperator {
         virtual void run(Stack& stack, Hash& hash) {
             const char* name = stack.pop_string();
             Cell cell = stack.pop();
@@ -865,9 +884,9 @@ private:
         }
     };
 
-    struct BuiltinStaticSet : public BuiltinOperator {
+    struct builtins_taticSet : public BuiltinOperator {
         bool first;
-        BuiltinStaticSet() {
+        builtins_taticSet() {
             first = false;
         }
         virtual void run(Stack& stack, Hash& hash) {
@@ -883,21 +902,18 @@ private:
         }
     };
 
-
 private:
-    Stack stack;
-    Hash hash;
+    Stack stack_;
+    Hash hash_;
 
     // resource
-    std::vector<std::string> strings;
-    std::vector<UserBinary> binaries;
-    std::vector<NativeWord*> natives;
-    std::vector<BuiltinOperator*> builtins;
+    std::vector<std::string> strings_;
+    std::vector<UserBinary> binaries_;
+    std::vector<NativeWord*> natives_;
+    std::vector<BuiltinOperator*> builtins_;
 
     friend struct Enviroment;
 };
-
-
 
 struct StaticNativeWord : public NativeWord {
     StaticNativeWord() {
@@ -1150,9 +1166,7 @@ namespace math {
     private:
         Vec result;
     };
-
 }
-
 
 void Enviroment::load_base_math() {
     // base words
@@ -1206,6 +1220,27 @@ Runtime Enviroment::build(const std::string& txt) {
     auto main_code = compile(txt);
     Runtime rt(*this, main_code);
     return rt;
+}
+
+// debug functions
+std::ostream& operator<<(std::ostream& os, const Cell& c) {
+    if ( c.type_ == Cell::T_String ) {
+        os << "S:" << c.v._str;
+    } else if ( c.type_ == Cell::T_Number ) {
+        os << "N:" << c.v._num;
+    } else {
+        os << "V:" << *(c.v._vec);
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, Stack& stack) {
+    os << "----STACK(" << stack.size() << ")----" << std::endl;
+    for (size_t i = 0; i < stack.data_.size(); i++) {
+        os << "->" << i << " " << stack.data_[i] << std::endl;
+    }
+    os << "----" << std::endl;
+    return os;
 }
 
 } // end of namespace
