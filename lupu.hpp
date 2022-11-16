@@ -334,7 +334,7 @@ struct WordCode {
 };
 
 struct WordByte {
-    const enum _WordByteType_ {
+    enum _WordByteType_ {
         Number,
         String,
         BuiltinOperator,
@@ -723,10 +723,10 @@ private:
     }
 
     UserWord& get_user(const std::string& name) {
-        if ( user_words_.find(name) != user_words_.end() ) {
-            return user_words_[name];
+        if ( user_words_.find(name) == user_words_.end() ) {
+            lupu_panic("Call a un registered native word!");
         }
-        lupu_panic("Call a un registered native word!");
+        return user_words_[name];
     }
 
 private:
@@ -939,6 +939,13 @@ static NativeWord* creator(Enviroment& env) {   \
     return wd;                                 \
 }
 namespace base {
+    struct Dump : public NativeWord {
+        virtual void run(Stack& stack) {
+            std::cout << stack << std::endl;
+        }
+        NWORD_CREATOR_DEFINE_LUPU(Dump)
+    };
+
     struct Drop : public NativeWord {
         virtual void run(Stack& stack) {
             stack.drop();
@@ -1170,6 +1177,7 @@ namespace math {
 
 void Enviroment::load_base_math() {
     // base words
+    insert_native_word("?", base::Dump::creator );
     insert_native_word("drop", base::Drop::creator );
     insert_native_word("dup", base::Dup::creator );
     insert_native_word("dup2", base::Dup2::creator );
@@ -1229,7 +1237,7 @@ std::ostream& operator<<(std::ostream& os, const Cell& c) {
     } else if ( c.type_ == Cell::T_Number ) {
         os << "N:" << c.v._num;
     } else {
-        os << "V:" << *(c.v._vec);
+        os << "V: (" << std::endl << *(c.v._vec) << " )";
     }
     return os;
 }
@@ -1237,7 +1245,7 @@ std::ostream& operator<<(std::ostream& os, const Cell& c) {
 std::ostream& operator<<(std::ostream& os, Stack& stack) {
     os << "----STACK(" << stack.size() << ")----" << std::endl;
     for (size_t i = 0; i < stack.data_.size(); i++) {
-        os << "->" << i << " " << stack.data_[i] << std::endl;
+        os << "==>" << i << " " << stack.data_[i] << std::endl;
     }
     os << "----" << std::endl;
     return os;
@@ -1245,3 +1253,19 @@ std::ostream& operator<<(std::ostream& os, Stack& stack) {
 
 } // end of namespace
 #endif
+
+#if 0
+int main(void ) {
+    const char* code = R"(
+10 randoms~ dup 10 zeros~ dup rot +
+)";
+
+    lupu::Enviroment env(44100);
+    auto rt = env.build(code);
+    rt.run();
+
+    std::cout << rt.stack() << std::endl;
+    return 0;
+}
+#endif
+
