@@ -369,15 +369,10 @@ using UserWord = std::vector<WordCode>;
 using UserBinary = std::vector<WordByte>;
 
 struct Enviroment {
-    union SettingValue {
-        int _int;
-        TNT _float;
-        bool _bool;
-    };
+    using SettingValue = std::variant<bool, int, TNT>;
 
     Enviroment(int sr) {
-        SettingValue sv;
-        sv._int = sr;
+        SettingValue sv = sr;
         settings_["SampleRate"] = sv;
 
         load_base_math();
@@ -742,6 +737,26 @@ struct Runtime {
 public:
     Runtime() = delete;
     Runtime(Enviroment& env, UserWord& main_code) {
+        // creating global ( 0 level ) hashmap
+        hash_.inc();
+
+        // loading all enviroment setting to runtime's hash
+        for (auto m : env.settings_) {
+            auto value = m.second;
+            size_t idx = string_id( m.first );
+            const char* key = strings_[idx].c_str();
+            if ( value.index() == 0 ) {
+                Hash::Item item = (TNT)std::get<0>(value);
+                hash_.set(key, item);
+            } else if ( value.index() == 1 ) {
+                Hash::Item item = (TNT)std::get<1>(value);
+                hash_.set(key, item);
+            } else {
+                Hash::Item item = std::get<2>(value);
+                hash_.set(key, item);
+            }
+        }
+
         linking(env, main_code);
     }
     void run() {
@@ -788,7 +803,6 @@ private:
         size_t bin_id = binaries_.size();
         binaries_.push_back( UserBinary() );
 
-        hash_.inc();
         UserBinary bin;
 
         for(size_t i = 0; i < word.size(); i++) {
@@ -830,6 +844,7 @@ private:
                 case WordCode::User :
                     bin.push_back( WordByte(WordByte::User, binaries_.size() ));
                     UserWord& new_word = env.get_user( code.str_ );
+                    hash_.inc();
                     linking(env, new_word);
                     break;
             }
@@ -1257,7 +1272,7 @@ std::ostream& operator<<(std::ostream& os, Stack& stack) {
 #if 0
 int main(void ) {
     const char* code = R"(
-10 randoms~ dup 10 zeros~ dup rot +
+10 randoms~ dup 10 ones~ dup rot +
 )";
 
     lupu::Enviroment env(44100);
