@@ -23,7 +23,16 @@ struct MonoWavOut : public NativeWord {
             SF_INFO out_info = { sr, sr, 1, SF_FORMAT_WAV | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE, 0, 0};
             out_sf = sf_open(file_name, SFM_WRITE, &out_info);
         }
-        stack.pop();
+
+        if ( stack.top().is_number() ) {
+            float v = stack.pop_number();
+            sf_write_float(out_sf, &v, 1);
+            return;
+        }
+
+        auto v = stack.pop_vector();
+        auto s = v->size();
+        sf_write_float(out_sf, v->data(), s);
     }
     NWORD_CREATOR_DEFINE_LR(MonoWavOut)
 private:
@@ -31,7 +40,7 @@ private:
 };
 
 void init_words(Enviroment& env) {
-    env.insert_native_word("monowav", MonoWavOut::creator);
+    env.insert_native_word("io.mono_wav", MonoWavOut::creator);
 }
 
 }}
