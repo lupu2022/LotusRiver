@@ -822,11 +822,11 @@ private:
                         if ( code.str_ == "@" ) {
                             op = new BuiltinGet();
                         } else if ( code.str_ == "@~" ) {
-                            op = new builtins_taticGet();
+                            op = new BuiltinStaticGet();
                         } else if ( code.str_ == "!" ) {
-                            op = new builtins_et();
+                            op = new BuiltinSet();
                         } else if ( code.str_ == "!~" ) {
-                            op = new builtins_taticSet();
+                            op = new BuiltinStaticSet();
                         } else {
                             lr_panic("Find an unsupoorted builtin operator!");
                         }
@@ -873,10 +873,10 @@ private:
         }
     };
 
-    struct builtins_taticGet : public BuiltinOperator {
+    struct BuiltinStaticGet : public BuiltinOperator {
         Hash::Item value;
         bool first;
-        builtins_taticGet() {
+        BuiltinStaticGet() {
             first = false;
         }
         virtual void run(Stack& stack, Hash& hash) {
@@ -891,7 +891,7 @@ private:
         }
     };
 
-    struct builtins_et : public BuiltinOperator {
+    struct BuiltinSet : public BuiltinOperator {
         virtual void run(Stack& stack, Hash& hash) {
             const char* name = stack.pop_string();
             Cell cell = stack.pop();
@@ -899,9 +899,9 @@ private:
         }
     };
 
-    struct builtins_taticSet : public BuiltinOperator {
+    struct BuiltinStaticSet : public BuiltinOperator {
         bool first;
-        builtins_taticSet() {
+        BuiltinStaticSet() {
             first = false;
         }
         virtual void run(Stack& stack, Hash& hash) {
@@ -1270,6 +1270,7 @@ std::ostream& operator<<(std::ostream& os, Stack& stack) {
 #endif
 
 #if 0
+// a simple testing
 int main(void ) {
     const char* code = R"(
 10 randoms~ dup 10 ones~ dup rot +
