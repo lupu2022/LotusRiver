@@ -1,2 +1,2 @@
-# lupu-synth
+# LotusRiver 
 An stacked, vectorized audio synthesizer.

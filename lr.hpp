@@ -1,5 +1,5 @@
-#ifndef _LUPU_H_
-#define _LUPU_H_
+#ifndef _LOTUS_RIVER_H_
+#define _LOTUS_RIVER_H_
 
 #include <map>
 #include <memory>
@@ -11,13 +11,13 @@
 #include <Eigen/Dense>
 
 // gloal help functions
-#define lupu_assert(Expr, Msg) \
-    lupu__M_Assert(#Expr, Expr, __FILE__, __LINE__, Msg)
+#define lr_assert(Expr, Msg) \
+    lr__M_Assert(#Expr, Expr, __FILE__, __LINE__, Msg)
 
-#define lupu_panic(Msg) \
-    lupu__M_Panic(__FILE__, __LINE__, Msg)
+#define lr_panic(Msg) \
+    lr__M_Panic(__FILE__, __LINE__, Msg)
 
-inline void lupu__M_Assert(const char* expr_str, bool expr, const char* file, int line, const char* msg) {
+inline void lr__M_Assert(const char* expr_str, bool expr, const char* file, int line, const char* msg) {
     if (!expr) {
         std::cerr << "Assert failed:\t" << msg << "\n"
             << "Expected:\t" << expr_str << "\n"
@@ -26,14 +26,14 @@ inline void lupu__M_Assert(const char* expr_str, bool expr, const char* file, in
     }
 }
 
-inline void lupu__M_Panic(const char* file, int line, const char* msg) {
+inline void lr__M_Panic(const char* file, int line, const char* msg) {
     std::cerr << "Assert failed:\t" << msg << "\n"
         << "Source:\t\t" << file << ", line " << line << "\n";
     abort();
 }
 
 
-namespace lupu {
+namespace lr {
 
 // target number type
 using Vec = Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>;
@@ -69,22 +69,22 @@ struct Cell {
 
     // fast access
     const char* as_string() {
-        lupu_assert(type_ == T_String, "Cell type can't convert to string!");
+        lr_assert(type_ == T_String, "Cell type can't convert to string!");
         return v._str;
     }
     bool as_boolean() {
-        lupu_assert(type_ == T_Number, "Cell type can't convert to boolean!");
+        lr_assert(type_ == T_Number, "Cell type can't convert to boolean!");
         if ( v._num == 0.0) {
             return false;
         }
         return true;
     }
     TNT as_number() {
-        lupu_assert(type_ == T_Number, "Cell type can't convert to number!");
+        lr_assert(type_ == T_Number, "Cell type can't convert to number!");
         return v._num;
     }
     const Vec* as_vector() {
-        lupu_assert(type_ == T_Vector, "Cell type can't convert to vector!");
+        lr_assert(type_ == T_Vector, "Cell type can't convert to vector!");
         return v._vec;
     }
     bool is_number() {
@@ -129,17 +129,17 @@ struct Stack {
     }
 
     Cell& top() {
-        lupu_assert(data_.size() > 0, "Can't access cell from empty stack!");
+        lr_assert(data_.size() > 0, "Can't access cell from empty stack!");
         return data_.back();
     }
     Cell pop() {
-        lupu_assert(data_.size() > 0, "Can't access cell from empty stack!");
+        lr_assert(data_.size() > 0, "Can't access cell from empty stack!");
         auto ret =  data_.back();
         data_.pop_back();
         return ret;
     }
     void drop() {
-        lupu_assert(data_.size() > 0, "Can't access cell from empty stack!");
+        lr_assert(data_.size() > 0, "Can't access cell from empty stack!");
         data_.pop_back();
     }
     void dup() {
@@ -168,7 +168,7 @@ struct Stack {
         data_.push_back(c);
     }
     TNT pop_number() {
-        lupu_assert(data_.size() > 0, "Can't access cell from empty stack!");
+        lr_assert(data_.size() > 0, "Can't access cell from empty stack!");
         auto ret =  data_.back();
         data_.pop_back();
         return ret.as_number();
@@ -182,19 +182,19 @@ struct Stack {
         return ret;
     }
     const char* pop_string() {
-        lupu_assert(data_.size() > 0, "Can't access cell from empty stack!");
+        lr_assert(data_.size() > 0, "Can't access cell from empty stack!");
         auto ret =  data_.back();
         data_.pop_back();
         return ret.as_string();
     }
     const Vec* pop_vector() {
-        lupu_assert(data_.size() > 0, "Can't access cell from empty stack!");
+        lr_assert(data_.size() > 0, "Can't access cell from empty stack!");
         auto ret =  data_.back();
         data_.pop_back();
         return ret.as_vector();
     }
     bool pop_boolean() {
-        lupu_assert(data_.size() > 0, "Can't access cell from empty stack!");
+        lr_assert(data_.size() > 0, "Can't access cell from empty stack!");
         auto ret =  data_.back();
         data_.pop_back();
         return ret.as_boolean();
@@ -240,7 +240,7 @@ struct Hash {
 
     void moveto(size_t i) {
         if ( i >= maps_.size() ) {
-            lupu_panic("Can't find target hash!");
+            lr_panic("Can't find target hash!");
         }
         target_ = i;
     }
@@ -252,7 +252,7 @@ struct Hash {
                     return maps_[0][name];
                 }
             }
-            lupu_panic("Can't find value for name!");
+            lr_panic("Can't find value for name!");
         }
         return maps_[target_][name];
     }
@@ -381,20 +381,20 @@ struct Enviroment {
 
     SettingValue query_config(const std::string& name) {
         if (settings_.find(name) == settings_.end() ) {
-            lupu_panic("Can't find target in env's settings!");
+            lr_panic("Can't find target in env's settings!");
         }
         return settings_[name];
     }
     void set_config(const std::string& name, SettingValue value) {
         if (settings_.find(name) != settings_.end() ) {
-            lupu_panic("Can't set same target in env's settings!");
+            lr_panic("Can't set same target in env's settings!");
         }
         settings_[name] = value;
     }
 
     void insert_native_word(const std::string& name, NativeCreator* fn) {
         if ( native_words_.find(name) != native_words_.end() ) {
-            lupu_panic("Can't insert native word with same name!");
+            lr_panic("Can't insert native word with same name!");
         }
         native_words_[name] = fn;
     }
@@ -444,7 +444,7 @@ private:
 
                         if ( cur == '"' ) {
                             if (current_str != "") {
-                                lupu_panic("tokenize_line error!");
+                                lr_panic("tokenize_line error!");
                             }
 
                             state = "STRING";
@@ -453,7 +453,7 @@ private:
                         }
                         if ( cur == '\'' ) {
                             if (current_str != "") {
-                                lupu_panic("tokenize_line error!");
+                                lr_panic("tokenize_line error!");
                             }
 
                             state = "STRING";
@@ -490,7 +490,7 @@ private:
                     }
                 }
                 if ( state == "STRING" ) {
-                    lupu_panic("tokenize_line error, string must end in one line!");
+                    lr_panic("tokenize_line error, string must end in one line!");
                 }
                 if (current_str != "") {
                     out.push_back(current_str);
@@ -500,12 +500,12 @@ private:
             static UserWord loop_macro(UserWord& w) {
                 UserWord looped;
                 if ( w.size() < 3 ) {
-                    lupu_panic("loop macro error, must including iden, begin, end");
+                    lr_panic("loop macro error, must including iden, begin, end");
                 }
 
-                lupu_assert( w[0].type_ == WordCode::String, "first item of loop macro, must be a string!");
-                lupu_assert( w[1].type_ == WordCode::Number, "second item of loop macro, must be a begin number!");
-                lupu_assert( w[2].type_ == WordCode::Number, "third item of loop macro, must be a end number!");
+                lr_assert( w[0].type_ == WordCode::String, "first item of loop macro, must be a string!");
+                lr_assert( w[1].type_ == WordCode::Number, "second item of loop macro, must be a begin number!");
+                lr_assert( w[2].type_ == WordCode::Number, "third item of loop macro, must be a end number!");
 
                 auto ident = w[0].str_;
                 auto begin = w[1].num_;
@@ -557,19 +557,19 @@ private:
             // first pass, processing command primitive
             if ( token == "#def" ) {
                 if ( user_code.has_value() ) {
-                    lupu_panic("Can't define a new user word inside another user word!");
+                    lr_panic("Can't define a new user word inside another user word!");
                 }
                 if ( loop_code.has_value() ) {
-                    lupu_panic("Can't define a new user word inside a loop macro!");
+                    lr_panic("Can't define a new user word inside a loop macro!");
                 }
                 if ( list_count.has_value() ) {
-                    lupu_panic("Can't define a new user word inside a list macro!");
+                    lr_panic("Can't define a new user word inside a list macro!");
                 }
                 user_code = UserWord();
 
                 i = i + 1;
                 if ( i >= tokens.size() ) {
-                    lupu_panic("Can't find #end for #def!");
+                    lr_panic("Can't find #end for #def!");
                 }
                 token = tokens[i];
                 if ( _::is_valid_name(token) ) {
@@ -580,17 +580,17 @@ private:
                         }
                     }
                 }
-                lupu_panic("Can't a valid name for #def macro!");
+                lr_panic("Can't a valid name for #def macro!");
 
             } else if (token == "#loop" ) {
                 if ( list_count.has_value() ) {
-                    lupu_panic("Can't define a loop macro inside a list macro!");
+                    lr_panic("Can't define a loop macro inside a list macro!");
                 }
                 loop_code = UserWord();
 
                 i = i + 1;
                 if ( i >= tokens.size() ) {
-                    lupu_panic("Can't find #end for #def!");
+                    lr_panic("Can't find #end for #def!");
                 }
                 token = tokens[i];
                 if ( _::is_valid_name(token) ) {
@@ -601,16 +601,16 @@ private:
                         }
                     }
                 }
-                lupu_panic("Can't a valid ident for #loop macro!");
+                lr_panic("Can't a valid ident for #loop macro!");
             } else if ( token == "[" ) {
                 if ( loop_code.has_value() ) {
-                    lupu_panic("Can't define a list macro inside a list macro!");
+                    lr_panic("Can't define a list macro inside a list macro!");
                 }
                 list_count = 0;
                 continue;
             } else if ( token == "#end" ) {
                 if ( list_count.has_value() ) {
-                    lupu_panic("Can't ending a word or a loop in a list macro.");
+                    lr_panic("Can't ending a word or a loop in a list macro.");
                 }
 
                 if ( loop_code.has_value() ) {
@@ -631,9 +631,9 @@ private:
                 if ( user_code.has_value() ) {
                     auto w = user_code.value();
                     if ( w.size() < 1 ) {
-                        lupu_panic("define macro error, must including a word name!");
+                        lr_panic("define macro error, must including a word name!");
                     }
-                    lupu_assert( w[0].type_ == WordCode::String, "first of define macro, must be a name!");
+                    lr_assert( w[0].type_ == WordCode::String, "first of define macro, must be a name!");
 
                     auto name = w[0].str_;
                     w.erase(w.begin());
@@ -643,10 +643,10 @@ private:
                     continue;
                 }
 
-                lupu_panic("Find #end without #def or #loop!");
+                lr_panic("Find #end without #def or #loop!");
             } else if ( token == "]" ) {
                 if ( !list_count.has_value() ) {
-                    lupu_panic("']' list macro appears without begin '['!");
+                    lr_panic("']' list macro appears without begin '['!");
                 }
 
                 UserWord& target = main_code;
@@ -682,7 +682,7 @@ private:
             } else if ( user_words_.find( token ) != user_words_.end() ) {
                 newCode = WordCode::new_user( token );
             } else {
-                lupu_panic("Find an invalid symbol is not string, number, builtin, user or native!");
+                lr_panic("Find an invalid symbol is not string, number, builtin, user or native!");
             }
 
             UserWord& target = main_code;
@@ -697,13 +697,13 @@ private:
         }
 
         if (list_count.has_value()) {
-            lupu_panic("List macro without ']' ending!");
+            lr_panic("List macro without ']' ending!");
         }
         if (loop_code.has_value()) {
-            lupu_panic("Loop macro without #end ending!");
+            lr_panic("Loop macro without #end ending!");
         }
         if (user_code.has_value()) {
-            lupu_panic("Define macro without #end ending!");
+            lr_panic("Define macro without #end ending!");
         }
 
         return main_code;
@@ -713,13 +713,13 @@ private:
         if ( native_words_.find(name) != native_words_.end() ) {
             return native_words_[name](*this);
         }
-        lupu_panic("Call a un registered native word!");
+        lr_panic("Call a un registered native word!");
         return nullptr;
     }
 
     UserWord& get_user(const std::string& name) {
         if ( user_words_.find(name) == user_words_.end() ) {
-            lupu_panic("Call a un registered native word!");
+            lr_panic("Call a un registered native word!");
         }
         return user_words_[name];
     }
@@ -828,7 +828,7 @@ private:
                         } else if ( code.str_ == "!~" ) {
                             op = new builtins_taticSet();
                         } else {
-                            lupu_panic("Find an unsupoorted builtin operator!");
+                            lr_panic("Find an unsupoorted builtin operator!");
                         }
                         size_t idx = builtins_.size();
                         builtins_.push_back(op);
@@ -948,7 +948,7 @@ private:
     bool first;
 };
 
-#define NWORD_CREATOR_DEFINE_LUPU(CLS)         \
+#define NWORD_CREATOR_DEFINE_LR(CLS)         \
 static NativeWord* creator(Enviroment& env) {   \
     NativeWord* wd = new CLS();                \
     return wd;                                 \
@@ -958,42 +958,42 @@ namespace base {
         virtual void run(Stack& stack) {
             std::cout << stack << std::endl;
         }
-        NWORD_CREATOR_DEFINE_LUPU(Dump)
+        NWORD_CREATOR_DEFINE_LR(Dump)
     };
 
     struct Drop : public NativeWord {
         virtual void run(Stack& stack) {
             stack.drop();
         }
-        NWORD_CREATOR_DEFINE_LUPU(Drop)
+        NWORD_CREATOR_DEFINE_LR(Drop)
     };
 
     struct Dup : public NativeWord {
         virtual void run(Stack& stack) {
             stack.dup();
         }
-        NWORD_CREATOR_DEFINE_LUPU(Dup)
+        NWORD_CREATOR_DEFINE_LR(Dup)
     };
 
     struct Dup2 : public NativeWord {
         virtual void run(Stack& stack) {
             stack.dup2();
         }
-        NWORD_CREATOR_DEFINE_LUPU(Dup2)
+        NWORD_CREATOR_DEFINE_LR(Dup2)
     };
 
     struct Swap : public NativeWord {
         virtual void run(Stack& stack) {
             stack.swap();
         }
-        NWORD_CREATOR_DEFINE_LUPU(Swap)
+        NWORD_CREATOR_DEFINE_LR(Swap)
     };
 
     struct Rot : public NativeWord {
         virtual void run(Stack& stack) {
             stack.rot();
         }
-        NWORD_CREATOR_DEFINE_LUPU(Rot)
+        NWORD_CREATOR_DEFINE_LR(Rot)
     };
 
     struct Zeros : public StaticNativeWord {
@@ -1006,7 +1006,7 @@ namespace base {
             stack.pop_number();
             stack.push_vector( &vec);
         }
-        NWORD_CREATOR_DEFINE_LUPU(Zeros)
+        NWORD_CREATOR_DEFINE_LR(Zeros)
     private:
         Vec vec;
     };
@@ -1021,7 +1021,7 @@ namespace base {
             stack.pop_number();
             stack.push_vector( &vec);
         }
-        NWORD_CREATOR_DEFINE_LUPU(Ones)
+        NWORD_CREATOR_DEFINE_LR(Ones)
     private:
         Vec vec;
     };
@@ -1036,7 +1036,7 @@ namespace base {
             stack.pop_number();
             stack.push_vector( &vec);
         }
-        NWORD_CREATOR_DEFINE_LUPU(Randoms)
+        NWORD_CREATOR_DEFINE_LR(Randoms)
     private:
         Vec vec;
     };
@@ -1052,14 +1052,14 @@ namespace base {
             stack.pop_number();
             stack.push_vector( &vec);
         }
-        NWORD_CREATOR_DEFINE_LUPU(Matrix)
+        NWORD_CREATOR_DEFINE_LR(Matrix)
     private:
         Vec vec;
     };
 
 }
 
-#define BIN_OP_MATH_WORD_LUPU(CLS, op)              \
+#define BIN_OP_MATH_WORD_LR(CLS, op)              \
 struct CLS : public NativeWord {                    \
     virtual void run(Stack& stack) {                \
         if ( stack.top().is_number() ) {            \
@@ -1081,7 +1081,7 @@ struct CLS : public NativeWord {                    \
                 return;                             \
             }                                       \
         }                                           \
-        lupu_panic("#CLS don't support type!");     \
+        lr_panic("#CLS don't support type!");     \
     }                                               \
     static NativeWord* creator(Enviroment& env) {   \
          NativeWord* wd = new CLS();                \
@@ -1091,7 +1091,7 @@ private:                                            \
     Vec result;                                     \
 }
 
-#define UNI_MATH_WORD_LUPU(CLS, op)                 \
+#define UNI_MATH_WORD_LR(CLS, op)                 \
 struct CLS : public NativeWord {                    \
     virtual void run(Stack& stack) {                \
         if ( stack.top().is_number() ) {            \
@@ -1103,7 +1103,7 @@ struct CLS : public NativeWord {                    \
             result = a->op();                       \
             return;                                 \
         }                                           \
-        lupu_panic("#CLS don't support type!");     \
+        lr_panic("#CLS don't support type!");     \
     }                                               \
     static NativeWord* creator(Enviroment& env) {   \
          NativeWord* wd = new CLS();                \
@@ -1115,36 +1115,36 @@ private:                                            \
 
 
 namespace math {
-    BIN_OP_MATH_WORD_LUPU(Add, +);
-    BIN_OP_MATH_WORD_LUPU(Sub, -);
-    BIN_OP_MATH_WORD_LUPU(Mul, *);
-    BIN_OP_MATH_WORD_LUPU(Div, /);
+    BIN_OP_MATH_WORD_LR(Add, +);
+    BIN_OP_MATH_WORD_LR(Sub, -);
+    BIN_OP_MATH_WORD_LR(Mul, *);
+    BIN_OP_MATH_WORD_LR(Div, /);
 
-    UNI_MATH_WORD_LUPU(Abs, abs);
-    UNI_MATH_WORD_LUPU(Arg, arg);
-    UNI_MATH_WORD_LUPU(Exp, exp);
-    UNI_MATH_WORD_LUPU(Log, log);
-    UNI_MATH_WORD_LUPU(Log1p, log1p);
-    UNI_MATH_WORD_LUPU(Log10, log10);
-    UNI_MATH_WORD_LUPU(Sqrt, sqrt);
+    UNI_MATH_WORD_LR(Abs, abs);
+    UNI_MATH_WORD_LR(Arg, arg);
+    UNI_MATH_WORD_LR(Exp, exp);
+    UNI_MATH_WORD_LR(Log, log);
+    UNI_MATH_WORD_LR(Log1p, log1p);
+    UNI_MATH_WORD_LR(Log10, log10);
+    UNI_MATH_WORD_LR(Sqrt, sqrt);
 
-    UNI_MATH_WORD_LUPU(Sin, sin);
-    UNI_MATH_WORD_LUPU(Cos, cos);
-    UNI_MATH_WORD_LUPU(Tan, tan);
-    UNI_MATH_WORD_LUPU(Asin, asin);
-    UNI_MATH_WORD_LUPU(Acos, acos);
-    UNI_MATH_WORD_LUPU(Atan, atan);
+    UNI_MATH_WORD_LR(Sin, sin);
+    UNI_MATH_WORD_LR(Cos, cos);
+    UNI_MATH_WORD_LR(Tan, tan);
+    UNI_MATH_WORD_LR(Asin, asin);
+    UNI_MATH_WORD_LR(Acos, acos);
+    UNI_MATH_WORD_LR(Atan, atan);
 
-    UNI_MATH_WORD_LUPU(Sinh, sinh);
-    UNI_MATH_WORD_LUPU(Cosh, cosh);
-    UNI_MATH_WORD_LUPU(Tanh, tanh);
-    UNI_MATH_WORD_LUPU(Asinh, asinh);
-    UNI_MATH_WORD_LUPU(Acosh, acosh);
-    UNI_MATH_WORD_LUPU(Atanh, atanh);
+    UNI_MATH_WORD_LR(Sinh, sinh);
+    UNI_MATH_WORD_LR(Cosh, cosh);
+    UNI_MATH_WORD_LR(Tanh, tanh);
+    UNI_MATH_WORD_LR(Asinh, asinh);
+    UNI_MATH_WORD_LR(Acosh, acosh);
+    UNI_MATH_WORD_LR(Atanh, atanh);
 
-    UNI_MATH_WORD_LUPU(Ceil, ceil);
-    UNI_MATH_WORD_LUPU(Floor, floor);
-    UNI_MATH_WORD_LUPU(Round, round);
+    UNI_MATH_WORD_LR(Ceil, ceil);
+    UNI_MATH_WORD_LR(Floor, floor);
+    UNI_MATH_WORD_LR(Round, round);
 
     struct Mod : public NativeWord {
         virtual void run(Stack& stack) {
@@ -1152,7 +1152,7 @@ namespace math {
             auto b = stack.pop_number();
             stack.push_number( fmod(a, b) );
         }
-        NWORD_CREATOR_DEFINE_LUPU(Mod)
+        NWORD_CREATOR_DEFINE_LR(Mod)
     };
 
     struct Inv : public NativeWord {
@@ -1166,7 +1166,7 @@ namespace math {
             result = a->inverse();
             stack.push_vector(&result);
         }
-        NWORD_CREATOR_DEFINE_LUPU(Inv);
+        NWORD_CREATOR_DEFINE_LR(Inv);
     private:
         Vec result;
     };
@@ -1184,7 +1184,7 @@ namespace math {
             result = a->pow(*b);
             stack.push_vector(&result);
         }
-        NWORD_CREATOR_DEFINE_LUPU(Pow)
+        NWORD_CREATOR_DEFINE_LR(Pow)
     private:
         Vec result;
     };
@@ -1275,7 +1275,7 @@ int main(void ) {
 10 randoms~ dup 10 ones~ dup rot +
 )";
 
-    lupu::Enviroment env(44100);
+    lr::Enviroment env(44100);
     auto rt = env.build(code);
     rt.run();
 
