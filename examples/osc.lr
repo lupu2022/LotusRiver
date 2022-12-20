@@ -1,0 +1,10 @@
+%def osc
+    0.0 "phase" !~
+    
+    (2.0 math.pi *) * "SampleRate" @~ inv *
+    
+    "phase" @ sin swap "phase" @ + (2.0 math.pi *) swap % "phase" !  
+    
+%end
+
+440 osc 0.5 * ("SampleRate" @~ "test.wav" io.mono_wav)

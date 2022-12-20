@@ -396,9 +396,13 @@ std::ostream& operator<<(std::ostream& os, const WordCode& c) {
 struct Enviroment;
 struct Runtime;
 struct NativeWord {
+    virtual ~NativeWord() {
+    }
     virtual void run(Stack& stack) = 0;
 };
 struct BuiltinOperator {
+    virtual ~BuiltinOperator() {
+    }
     virtual void run(Stack& stack, Hash& hash) = 0;
 };
 using NativeCreator = NativeWord* (Enviroment&);
@@ -810,6 +814,18 @@ public:
 
     Stack& stack() {
         return stack_;
+    }
+
+    ~Runtime() {
+        for (size_t i = 0; i < strings_.size(); i++) {
+            delete strings_[i];
+        }
+        for (size_t i = 0; i < natives_.size(); i++) {
+            delete natives_[i];
+        }
+        for (size_t i = 0; i < builtins_.size(); i++) {
+            delete builtins_[i];
+        }
     }
 
 private:
@@ -1325,8 +1341,6 @@ Runtime Enviroment::build(const std::string& txt) {
     Runtime rt(*this, main_code);
     return rt;
 }
-
-
 
 } // end of namespace
 #endif

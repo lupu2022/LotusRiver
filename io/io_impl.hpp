@@ -10,10 +10,11 @@ struct MonoWavOut : public NativeWord {
     MonoWavOut() {
         out_sf = nullptr;
     }
-    ~MonoWavOut() {
-        sf_close(out_sf);
+    virtual ~MonoWavOut() {
+        if ( out_sf != nullptr ) {
+            sf_close(out_sf);
+        }
     }
-
 
     virtual void run(Stack& stack) {
         const char* file_name = stack.pop_string();
@@ -34,6 +35,7 @@ struct MonoWavOut : public NativeWord {
         auto s = v->size();
         sf_write_float(out_sf, v->data(), s);
     }
+
     NWORD_CREATOR_DEFINE_LR(MonoWavOut)
 private:
     SNDFILE* out_sf;
