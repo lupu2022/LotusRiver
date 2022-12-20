@@ -652,12 +652,12 @@ private:
                 if ( loop_code.has_value() ) {
                     auto looped = _::loop_macro( loop_code.value() );
 
-                    UserWord& target = main_code;
+                    UserWord* target = &main_code;
                     if ( user_code.has_value() ) {
-                        target = user_code.value();
+                        target = &user_code.value();
                     }
                     for (size_t i = 0; i < looped.size(); i++) {
-                        target.push_back(looped[i]);
+                        target->push_back(looped[i]);
                     }
 
                     loop_code.reset();
@@ -685,12 +685,12 @@ private:
                     lr_panic("']' list macro appears without begin '['!");
                 }
 
-                UserWord& target = main_code;
+                UserWord* target = &main_code;
                 if ( user_code.has_value() ) {
-                    target = user_code.value();
+                    target = &user_code.value();
                 }
 
-                target.push_back( WordCode::new_number( TNT( list_count.value() ) ) );
+                target->push_back( WordCode::new_number( TNT( list_count.value() ) ) );
 
                 list_count.reset();
                 continue;
@@ -710,6 +710,11 @@ private:
                         token == "!~") {
                 newCode = WordCode::new_builtin( token );
             } else if ( token[0] == '"' || token[0] == '\'' || token[0] == '$' ) {
+                if ( token[0] == '"' || token[0] == '\'' ) {
+                    lr_assert( token.size() >= 2, " string must begin \" ' or $");
+                    lr_assert( token[0] == token.back() , " string length wrong");
+                    token = token.substr(1, token.size() - 2);
+                }
                 newCode = WordCode::new_string( token );
             } else if ( _::parse_number(token, newCode.num_) ) {
                 newCode = WordCode::new_number( newCode.num_ );
@@ -721,18 +726,18 @@ private:
                 lr_panic("Find an invalid symbol is not string, number, builtin, user or native!");
             }
 
-            UserWord& target = main_code;
+            UserWord* target = &main_code;
             if ( user_code.has_value() ) {
-                target = user_code.value();
+                target = &user_code.value();
             }
             if ( loop_code.has_value() ) {
-                target = loop_code.value();
+                target = &loop_code.value();
             }
             if ( list_count.has_value() ) {
                 list_count = list_count.value() + 1;
             }
 
-            target.push_back(newCode);
+            target->push_back(newCode);
         }
 
         if (list_count.has_value()) {
@@ -924,6 +929,7 @@ private:
                 const char* name = stack.pop_string();
                 value = hash.find(name);
                 stack.push( Hash::Item2Cell(&value) );
+                return;
             }
             stack.pop_string();
             stack.push( Hash::Item2Cell(&value) );
@@ -1308,13 +1314,6 @@ void Enviroment::load_base_math() {
 
 Runtime Enviroment::build(const std::string& txt) {
     auto main_code = compile(txt);
-    std::cout << "=== main_code ===" << std::endl;
-    for(size_t i = 0; i < main_code.size(); i++) {
-        std::cout << main_code[i] << std::endl;
-    }
-    std::cout << "===" << std::endl;
-
-    exit(0);
     Runtime rt(*this, main_code);
     return rt;
 }
