@@ -33,7 +33,6 @@ int main(int argc, const char* argv[] ) {
 
     auto rt = env.build(codes);
     rt.run();
-    rt.run();
 }
 
 

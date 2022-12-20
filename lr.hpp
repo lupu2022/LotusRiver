@@ -116,6 +116,18 @@ struct Cell {
     }
 };
 
+std::ostream& operator<<(std::ostream& os, const Cell& c) {
+    if ( c.type_ == Cell::T_String ) {
+        os << "S:" << c.v._str;
+    } else if ( c.type_ == Cell::T_Number ) {
+        os << "N:" << c.v._num;
+    } else {
+        os << "V: (" << std::endl << *(c.v._vec) << " )";
+    }
+    return os;
+}
+
+
 
 // Stack & Hash
 struct Stack {
@@ -226,6 +238,14 @@ private:
     friend std::ostream& operator<<(std::ostream& os, Stack& stack);
     friend struct Runtime;
 };
+std::ostream& operator<<(std::ostream& os, Stack& stack) {
+    os << "----STACK(" << stack.size() << ")----" << std::endl;
+    for (size_t i = 0; i < stack.data_.size(); i++) {
+        os << "==>" << i << " " << stack.data_[i] << std::endl;
+    }
+    os << "----" << std::endl;
+    return os;
+}
 
 struct Hash {
     using Item = std::variant<TNT, const char*, Vec>;
@@ -355,6 +375,22 @@ struct WordByte {
     WordByte(_WordByteType_ t): type_(t) {
     }
 };
+
+std::ostream& operator<<(std::ostream& os, const WordCode& c) {
+    if ( c.type_ == WordCode::String ) {
+        os << "S:" << c.str_;
+    } else if ( c.type_ == WordCode::Number ) {
+        os << "N:" << c.num_;
+    } else if ( c.type_ == WordCode::Builtin ) {
+        os << "B:" << c.str_;
+    } else if ( c.type_ == WordCode::Native ) {
+        os << "NA:" << c.str_;
+    } else {
+        os << "U:" << c.str_;
+    }
+    return os;
+}
+
 
 // Envrioment
 struct Enviroment;
@@ -688,6 +724,9 @@ private:
             UserWord& target = main_code;
             if ( user_code.has_value() ) {
                 target = user_code.value();
+            }
+            if ( loop_code.has_value() ) {
+                target = loop_code.value();
             }
             if ( list_count.has_value() ) {
                 list_count = list_count.value() + 1;
@@ -1269,30 +1308,18 @@ void Enviroment::load_base_math() {
 
 Runtime Enviroment::build(const std::string& txt) {
     auto main_code = compile(txt);
+    std::cout << "=== main_code ===" << std::endl;
+    for(size_t i = 0; i < main_code.size(); i++) {
+        std::cout << main_code[i] << std::endl;
+    }
+    std::cout << "===" << std::endl;
+
+    exit(0);
     Runtime rt(*this, main_code);
     return rt;
 }
 
-// debug functions
-std::ostream& operator<<(std::ostream& os, const Cell& c) {
-    if ( c.type_ == Cell::T_String ) {
-        os << "S:" << c.v._str;
-    } else if ( c.type_ == Cell::T_Number ) {
-        os << "N:" << c.v._num;
-    } else {
-        os << "V: (" << std::endl << *(c.v._vec) << " )";
-    }
-    return os;
-}
 
-std::ostream& operator<<(std::ostream& os, Stack& stack) {
-    os << "----STACK(" << stack.size() << ")----" << std::endl;
-    for (size_t i = 0; i < stack.data_.size(); i++) {
-        os << "==>" << i << " " << stack.data_[i] << std::endl;
-    }
-    os << "----" << std::endl;
-    return os;
-}
 
 } // end of namespace
 #endif
