@@ -16,8 +16,8 @@ struct MonoWavOut : public NativeWord {
 
 
     virtual void run(Stack& stack) {
-        int sr = stack.pop_number();
         const char* file_name = stack.pop_string();
+        int sr = stack.pop_number();
 
         if ( out_sf == nullptr) {
             SF_INFO out_info = { sr, sr, 1, SF_FORMAT_WAV | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE, 0, 0};

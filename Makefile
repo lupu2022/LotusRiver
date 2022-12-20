@@ -1,6 +1,6 @@
 .PHONY: all
 
-FLAGS = -std=c++17 -Wall -fopenmp -O3
+FLAGS = -std=c++17 -Wall -fopenmp -g
 INC = -I. -I./eigen3
 
 LINK = -lsndfile -lpthread -lm

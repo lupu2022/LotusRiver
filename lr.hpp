@@ -8,6 +8,7 @@
 #include <variant>
 #include <optional>
 #include <iostream>
+#include <cmath>
 #include <Eigen/Dense>
 
 // gloal help functions
@@ -374,7 +375,6 @@ struct Enviroment {
     Enviroment(int sr) {
         SettingValue sv = sr;
         settings_["SampleRate"] = sv;
-
         load_base_math();
     }
     ~Enviroment() {}
@@ -555,7 +555,7 @@ private:
             auto token = tokens[i];
 
             // first pass, processing command primitive
-            if ( token == "#def" ) {
+            if ( token == "%def" ) {
                 if ( user_code.has_value() ) {
                     lr_panic("Can't define a new user word inside another user word!");
                 }
@@ -582,7 +582,7 @@ private:
                 }
                 lr_panic("Can't a valid name for #def macro!");
 
-            } else if (token == "#loop" ) {
+            } else if (token == "%loop" ) {
                 if ( list_count.has_value() ) {
                     lr_panic("Can't define a loop macro inside a list macro!");
                 }
@@ -608,7 +608,7 @@ private:
                 }
                 list_count = 0;
                 continue;
-            } else if ( token == "#end" ) {
+            } else if ( token == "%end" ) {
                 if ( list_count.has_value() ) {
                     lr_panic("Can't ending a word or a loop in a list macro.");
                 }
@@ -996,6 +996,16 @@ namespace base {
         NWORD_CREATOR_DEFINE_LR(Rot)
     };
 
+    struct OnlyOnce : public StaticNativeWord {
+        virtual void run_first(Stack& stack) {
+            return;
+        }
+        virtual void run_next(Stack& stack) {
+            stack.drop();
+        }
+        NWORD_CREATOR_DEFINE_LR(OnlyOnce)
+    };
+
     struct Zeros : public StaticNativeWord {
         virtual void run_first(Stack& stack) {
             size_t len = stack.pop_number();
@@ -1188,16 +1198,31 @@ namespace math {
     private:
         Vec result;
     };
+
+    struct PI : public NativeWord {
+        virtual void run(Stack& stack) {
+            stack.push_number(M_PI);
+        }
+        NWORD_CREATOR_DEFINE_LR(PI);
+    };
+
+    struct E : public NativeWord {
+        virtual void run(Stack& stack) {
+            stack.push_number(M_E);
+        }
+        NWORD_CREATOR_DEFINE_LR(E);
+    };
 }
 
 void Enviroment::load_base_math() {
     // base words
-    insert_native_word("?", base::Dump::creator );
     insert_native_word("drop", base::Drop::creator );
     insert_native_word("dup", base::Dup::creator );
     insert_native_word("dup2", base::Dup2::creator );
     insert_native_word("swap", base::Swap::creator );
     insert_native_word("rot", base::Rot::creator );
+    insert_native_word("~", base::OnlyOnce::creator);
+    insert_native_word("?", base::Dump::creator );
 
     insert_native_word("zeros~", base::Zeros::creator );
     insert_native_word("ones~", base::Ones::creator );
@@ -1237,6 +1262,9 @@ void Enviroment::load_base_math() {
     insert_native_word("ceil", math::Ceil::creator );
     insert_native_word("floor", math::Floor::creator );
     insert_native_word("round", math::Round::creator );
+
+    insert_native_word("math.pi", math::PI::creator );
+    insert_native_word("math.e", math::E::creator );
 }
 
 Runtime Enviroment::build(const std::string& txt) {
@@ -1269,19 +1297,4 @@ std::ostream& operator<<(std::ostream& os, Stack& stack) {
 } // end of namespace
 #endif
 
-#if 0
-// a simple testing
-int main(void ) {
-    const char* code = R"(
-10 randoms~ dup 10 ones~ dup rot +
-)";
-
-    lr::Enviroment env(44100);
-    auto rt = env.build(code);
-    rt.run();
-
-    std::cout << rt.stack() << std::endl;
-    return 0;
-}
-#endif
 
