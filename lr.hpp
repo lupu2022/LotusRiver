@@ -788,7 +788,8 @@ public:
         for (auto m : env.settings_) {
             auto value = m.second;
             size_t idx = string_id( m.first );
-            const char* key = strings_[idx].c_str();
+            const char* key = strings_[idx];
+
             if ( value.index() == 0 ) {
                 Hash::Item item = (TNT)std::get<0>(value);
                 hash_.set(key, item);
@@ -823,7 +824,7 @@ private:
 
                 case WordByte::String:
                     {
-                        const char* str = strings_[ byte.idx_ ].c_str();
+                        const char* str = strings_[ byte.idx_ ];
                         stack_.push_string(str);
                     }
                     break;
@@ -899,12 +900,17 @@ private:
 
     size_t string_id(const std::string& str) {
         for (size_t i = 0; i < strings_.size(); i++) {
-            if ( strings_[i] == str ) {
+            if ( strcmp(strings_[i], str.c_str()) == 0 ) {
                 return i;
             }
         }
+
         size_t ret = strings_.size();
-        strings_.push_back( str );
+
+        char* new_str = new char[ str.length() + 1];
+        strcpy(new_str, str.c_str() );
+        strings_.push_back(new_str);
+
         return ret;
     }
 
@@ -927,6 +933,7 @@ private:
             if ( first == false) {
                 first = true;
                 const char* name = stack.pop_string();
+
                 value = hash.find(name);
                 stack.push( Hash::Item2Cell(&value) );
                 return;
@@ -967,7 +974,8 @@ private:
     Hash hash_;
 
     // resource
-    std::vector<std::string> strings_;
+    std::vector<const char*> strings_;
+
     std::vector<UserBinary> binaries_;
     std::vector<NativeWord*> natives_;
     std::vector<BuiltinOperator*> builtins_;
