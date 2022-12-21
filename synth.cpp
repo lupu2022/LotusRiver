@@ -7,6 +7,7 @@
 
 #include "lr.hpp"
 #include "io/io_impl.hpp"
+#include "nn/nn_impl.hpp"
 
 std::string fileToString(const char* filename) {
     std::ifstream t(filename);
