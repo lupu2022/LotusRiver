@@ -7,7 +7,10 @@ LINK = -lsndfile -lpthread -lm
 
 all: synth 
 
-synth: synth.cpp lr.hpp io/io_impl.hpp 
+wavenet.o: lr.hpp nn/wavenet.hpp nn/wavenet.cpp
+	g++ $(FLAGS) -c -o $@ nn/wavenet.cpp $(INC) 
+
+synth: synth.cpp lr.hpp io/io_impl.hpp nn/nn_impl.hpp wavenet.o 
 	g++ $(FLAGS) -c -o synth.o synth.cpp $(INC)
 	g++ $(FLAGS) -o $@ synth.o $(LINK) 
 

@@ -1,44 +1,10 @@
-#ifndef _NN_CONV_HPP_
-#define _NN_CONV_HPP_
-
 #include <Eigen/Core>
 #include <Eigen/StdVector>
+
 #include "lr.hpp"
+#include "nn/wavenet.hpp"
 
-namespace lr { namespace nn {
-
-struct Convolution {
-
-public:
-    Convolution(size_t inputChannels, size_t outputChannels, int filterWidth, int dilation = 1);
-    int getFilterOrder() const;
-    void process(const TNT* x, TNT* y, int numSamples);
-    void setParams(size_t inputChannels, size_t outputChannels, int filterWidth, int dilation);
-    size_t getNumInputChannels() { return inputChannels; }
-    size_t getNumOutputChannels() { return outputChannels; }
-    void setWeight(std::vector<TNT> W, std::string name);
-
-private:
-    std::vector<Eigen::MatrixXf, Eigen::aligned_allocator<Eigen::MatrixXf >> kernel;
-    Eigen::RowVectorXf bias;
-    std::vector<Eigen::RowVectorXf, Eigen::aligned_allocator<Eigen::RowVectorXf> > memory;
-    Eigen::RowVectorXf outVec;
-    int pos;
-    int dilation;
-    size_t inputChannels;
-    size_t outputChannels;
-    int filterWidth;
-
-    void resetFifo();
-    void resetKernel();
-    void processSingleSample(const TNT* x, TNT* y, int i, int numSamples);
-
-    int mod(int a, int b);
-    int idx(int ch, int i, int numSamples);
-
-    void setKernel(std::vector<TNT> W);
-    void setBias(std::vector<TNT> W);
-};
+namespace lr { namespace wavenet {
 
 Convolution::Convolution(size_t inputChannels,
                          size_t outputChannels,
@@ -93,18 +59,18 @@ int Convolution::getFilterOrder() const {
     return (filterWidth-1)*dilation + 1;
 }
 
-void Convolution::process(const TNT* x, TNT* y, int numSamples) {
+void Convolution::process(TNT* data, int numSamples) {
     for (int i = 0; i < numSamples; ++i) {
-        processSingleSample(x, y, i , numSamples);
+        processSingleSample(data, i , numSamples);
     }
 }
 
-void Convolution::processSingleSample(const TNT* x, TNT* y, int i, int numSamples) {
+void Convolution::processSingleSample(TNT* data, int i, int numSamples) {
     if ( (int)memory.size() != getFilterOrder())
         resetFifo();
     auto fifo = memory.begin();
     for (size_t ch = 0; ch < inputChannels; ++ch)
-        (*(fifo+pos))[ch] = x[idx(ch, i, numSamples)];
+        (*(fifo+pos))[ch] = data[idx(ch, i, numSamples)];
     outVec.setZero();
     std::vector<Eigen::MatrixXf>::iterator it;
     int j = 0;
@@ -116,7 +82,7 @@ void Convolution::processSingleSample(const TNT* x, TNT* y, int i, int numSample
     }
     outVec = outVec + bias;
     for (size_t ch = 0; ch < outputChannels; ++ch)
-        y[idx(ch, i, numSamples)] = outVec[ch];
+        data[idx(ch, i, numSamples)] = outVec[ch];
     pos = mod(pos + 1, getFilterOrder());
 }
 
@@ -155,61 +121,6 @@ void Convolution::setBias(std::vector<TNT> W) {
         bias(i) = W[i];
 }
 
-struct ConvWord : public NativeWord {
-    ConvWord() {
-        conv_ = nullptr;
-    }
-    virtual ~ConvWord() {
-        if ( conv_ != nullptr) {
-            delete conv_;
-        }
-    }
-    virtual void run(Stack& stack) {
-        if ( conv_ == nullptr ) {
-            init(stack);
-        } else {
-            stack.pop_number();
-            stack.pop_number();
-            stack.pop_number();
-            stack.pop_number();
-        }
 
-        auto x = stack.pop_vector();
-        check_buffer(x);
-
-        int nSamples = x->cols();
-        conv_->process(x->data(), out_.data(), nSamples );
-    }
-
-    NWORD_CREATOR_DEFINE_LR(ConvWord)
-
-private:
-    void init(Stack& stack) {
-        int dilation = stack.pop_number();
-        int kernel = stack.pop_number();
-        int output = stack.pop_number();
-        int input = stack.pop_number();
-        conv_ = new Convolution(input, output, kernel, dilation);
-    }
-
-    void check_buffer(const Vec* x) {
-        auto length = x->cols();
-        auto channels = x->rows();
-
-        if ( (out_.cols() != length) ||
-             (out_.rows() != channels ) ) {
-            out_ = Vec(channels, length);
-        }
-
-        lr_assert( (size_t)channels == conv_->getNumInputChannels(), "Input channle must be same with conv");
-    }
-
-private:
-    Convolution* conv_;
-    Vec out_;
-};
 
 }}
-
-
-#endif

@@ -2,7 +2,7 @@
 #define _NN_IMPL_HPP_
 
 #include "lr.hpp"
-#include "nn/conv.hpp"
+#include "nn/wavenet.hpp"
 
 namespace lr { namespace nn {
 
