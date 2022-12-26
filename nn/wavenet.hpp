@@ -7,6 +7,8 @@
 
 namespace lr { namespace wavenet {
 
+typedef void (* activationFuncArray)(TNT *data, size_t rows, size_t cols);
+
 struct Convolution {
 public:
     Convolution(size_t inputChannels, size_t outputChannels, int filterWidth, int dilation = 1);
@@ -39,8 +41,7 @@ private:
     void setBias(std::vector<TNT> W);
 };
 
-class ConvolutionLayer
-{
+class ConvolutionLayer {
 public:
     ConvolutionLayer(size_t inputChannels,
                      size_t outputChannels,
@@ -59,8 +60,8 @@ private:
     Convolution out1x1;
     bool residual;
     bool usesGating;
-    typedef void (* activationFunction)(float *x , size_t rows, size_t cols);
-    activationFunction activation;
+
+    activationFuncArray activation;
     void copySkipData(float *data, float *skipData, int numSamples);
 };
 
