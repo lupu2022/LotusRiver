@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef _LOTUS_RIVER_H_
 #define _LOTUS_RIVER_H_
 
@@ -694,7 +696,8 @@ private:
                     target = &user_code.value();
                 }
 
-                target->push_back( WordCode::new_number( TNT( list_count.value() ) ) );
+                TNT lcount = list_count.value();
+                target->push_back( WordCode::new_number( lcount ) );
 
                 list_count.reset();
                 continue;

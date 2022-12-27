@@ -7,6 +7,5 @@
 namespace lr { namespace nn {
 
 
-
 }}
 #endif
