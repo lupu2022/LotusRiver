@@ -4,6 +4,32 @@
 #include "lr.hpp"
 #include "nn/wavenet.hpp"
 
+/*
+def forward(self, x):
+    out = x
+    skips = []
+    out = self.input_layer(out)
+
+    for hidden, residual in zip(self.hidden, self.residuals):
+        x = out
+        out_hidden = hidden(x)
+
+        # gated activation
+        #   split (32,16,3) into two (16,16,3) for tanh and sigm calculations
+        out_hidden_split = torch.split(out_hidden, self.num_channels, dim=1)
+        out = torch.tanh(out_hidden_split[0]) * torch.sigmoid(out_hidden_split[1])
+
+        skips.append(out)
+
+        out = residual(out)
+        out = out + x[:, :, -out.size(2) :]
+
+    # modified "postprocess" step:
+    out = torch.cat([s[:, :, -out.size(2) :] for s in skips], dim=1)
+    out = self.linear_mix(out)
+    return out
+*/
+
 namespace lr { namespace wavenet {
 
 struct InputLayer {
@@ -58,14 +84,17 @@ struct HiddenLayer {
     void process(const TNT* data, size_t number, size_t channels) {
         lr_assert(channels == channels_, "Input must has same channels with define");
 
+        // preparing memory for skipout and out
+
+
         for ( size_t i = 0; i < number; i++) {
             const TNT* sample = data + i * channels;
-            processOneSample(sample);
+            processOneSample(sample, i);
         }
     }
 
-public:
-    void processOneSample(const TNT* sample) {
+private:
+    void processOneSample(const TNT* sample, size_t t) {
         // 0. update fifo
         for (size_t i = 0; i < channels_; i++) {
             fifo_[fifo_cursor_ * channels_ + i] = sample[i];
@@ -91,12 +120,26 @@ public:
 
             gate_out_[i] = out;
         }
+
+        // gated activation
+        for (size_t i = 0; i < channels_; i++) {
+            TNT o1 = tanh( gate_out_[i]);
+            TNT o2 = sigmoid( gate_out_[i + channels_]);
+
+            TNT out = o1 * o2;
+
+        }
+
     }
 
-private:
+    // help functions
+    float sigmoid(float x) {
+        return 1.0f / (1.0f + expf(-x));
+    }
+
     const TNT* fifo_get(size_t kernel) {
         int pos = (int)fifo_cursor_ - 1 - kernel;
-        pos = pos % (int)fifo_cursor_;
+        pos = pos % (int)fifo_order_;
         if ( pos < 0 ) {
             pos = pos + (int)fifo_order_;
         }
@@ -116,9 +159,12 @@ private:
     std::vector<TNT> res_kernel_;       // channel * channel * 1
     std::vector<TNT> res_bias_;         // channel
 
-
+    // input
     std::vector<TNT> fifo_;             // fifo_order * channel
     size_t fifo_cursor_;
+
+    // output
+
 };
 
 
