@@ -32,6 +32,10 @@ def forward(self, x):
 
 namespace lr { namespace wavenet {
 
+struct ParameterRegister {
+    virtual void new_weight(std::vector<TNT>& w) = 0;
+};
+
 struct InputLayer {
     InputLayer(const size_t out_channels) {
         kernel_.resize(0.0, out_channels);
@@ -54,9 +58,10 @@ struct InputLayer {
         }
     }
 
-    TNT* output() {
-        return out_.data();
+    const std::vector<TNT>& output() {
+        return out_;
     }
+
 private:
     std::vector<TNT> kernel_;
     std::vector<TNT> bias_;
@@ -76,21 +81,32 @@ struct HiddenLayer {
         res_kernel_.resize(0.0,  channels * channels );
         res_bias_.resize(0.0, channels);
 
-
         fifo_.resize(0.0, fifo_order_ * channels );
         fifo_cursor_ = 0;
     }
 
-    void process(const TNT* data, size_t number, size_t channels) {
+    void process(const std::vector<TNT>& data, size_t number, size_t channels) {
         lr_assert(channels == channels_, "Input must has same channels with define");
+        lr_assert(data.size() == number * channels, "Input must has same channels with define");
 
-        // preparing memory for skipout and out
-
+        // preparing memory for skip and next out
+        if ( skip_out_.size() < number * channels_ ) {
+            skip_out_.resize(0.0, number * channels_);
+            next_out_.resize(0.0, number * channels_);
+        }
 
         for ( size_t i = 0; i < number; i++) {
-            const TNT* sample = data + i * channels;
+            const TNT* sample = data.data() + i * channels;
             processOneSample(sample, i);
         }
+    }
+
+    const std::vector<TNT>& skip_out() {
+        return skip_out_;
+    }
+
+    const std::vector<TNT>& next_out() {
+        return next_out_;
     }
 
 private:
@@ -121,15 +137,24 @@ private:
             gate_out_[i] = out;
         }
 
-        // gated activation
+        // 2. gated activation
         for (size_t i = 0; i < channels_; i++) {
             TNT o1 = tanh( gate_out_[i]);
             TNT o2 = sigmoid( gate_out_[i + channels_]);
 
-            TNT out = o1 * o2;
-
+            gate_out_[i] = o1 * o2;
+            skip_out_[t * channels_ + i ] = gate_out_[i];
         }
 
+        // 3. do residual
+        for (size_t i = 0; i < channels_; i++) {
+            TNT out = 0.0;
+            for (size_t j = 0; j < channels_; j++) {
+                out = out + gate_out_[j] * res_kernel_[i * channels_ + j];
+            }
+            out = out + res_bias_[i] + sample[i];
+            next_out_[t * channels_ + i] = out;
+        }
     }
 
     // help functions
@@ -152,9 +177,9 @@ private:
     const size_t kernel_size_;
     const size_t fifo_order_;           // (kernel_size - 1) * dialation + 1
 
-    std::vector<TNT> gate_kernel_;      // 2 * channels * channels * kernel_size
-    std::vector<TNT> gate_bias_;        // 2 * channels
-    std::vector<TNT> gate_out_;
+    std::vector<TNT> gate_kernel_;      // output channel * input channel * kernel size
+    std::vector<TNT> gate_bias_;        // output channel
+    std::vector<TNT> gate_out_;         // output channel
 
     std::vector<TNT> res_kernel_;       // channel * channel * 1
     std::vector<TNT> res_bias_;         // channel
@@ -164,7 +189,8 @@ private:
     size_t fifo_cursor_;
 
     // output
-
+    std::vector<TNT> skip_out_;
+    std::vector<TNT> next_out_;
 };
 
 
