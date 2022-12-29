@@ -37,9 +37,12 @@ struct ParameterRegister {
 };
 
 struct InputLayer {
-    InputLayer(const size_t out_channels) {
+    InputLayer(const size_t out_channels, ParameterRegister* reg) {
         kernel_.resize(0.0, out_channels);
         bias_.resize(0.0, out_channels);
+
+        reg->new_weight(kernel_);
+        reg->new_weight(bias_);
     }
 
     void process(const TNT* data, size_t number) {
@@ -70,9 +73,12 @@ private:
 
 // main computing stuff
 struct HiddenLayer {
-    HiddenLayer(const size_t channels, const size_t dialation, const size_t kernel_size)
-        : channels_(channels), dialation_(dialation), kernel_size_(kernel_size) ,
-          fifo_order_( (kernel_size - 1) * dialation + 1) {
+    HiddenLayer(const size_t channels,
+                const size_t dialation,
+                const size_t kernel_size,
+                ParameterRegister* reg) :
+        channels_(channels), dialation_(dialation), kernel_size_(kernel_size) ,
+        fifo_order_( (kernel_size - 1) * dialation + 1) {
 
         gate_kernel_.resize(0.0, 2 * channels * channels * kernel_size);
         gate_bias_.resize(0.0, 2 * channels);
@@ -83,6 +89,12 @@ struct HiddenLayer {
 
         fifo_.resize(0.0, fifo_order_ * channels );
         fifo_cursor_ = 0;
+
+
+        reg->new_weight(gate_kernel_);
+        reg->new_weight(gate_bias_);
+        reg->new_weight(res_kernel_);
+        reg->new_weight(res_bias_);
     }
 
     void process(const std::vector<TNT>& data, size_t number, size_t channels) {
@@ -193,5 +205,28 @@ private:
     std::vector<TNT> next_out_;
 };
 
+struct WaveNet : public ParameterRegister {
+    WaveNet (size_t channels, size_t kernel_size, const std::vector<size_t>& dialations):
+        channels_(channels), kernel_size_(kernel_size), dialations_(dialations) {
+
+        input_ = new InputLayer(channels, this);
+        for (size_t i = 0; i < dialations.size(); i++) {
+            auto hidden = new  HiddenLayer(channels, dialations[i], kernel_size, this);
+            hiddens_.push_back( hidden );
+        }
+    }
+
+    virtual void new_weight(std::vector<TNT>& w) {
+        // TODO
+    }
+
+private:
+    size_t  channels_;
+    size_t  kernel_size_;
+    std::vector<size_t> dialations_;
+
+    InputLayer* input_;
+    std::vector<HiddenLayer*> hiddens_;
+};
 
 }}
