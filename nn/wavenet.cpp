@@ -1,3 +1,4 @@
+#include <fstream>
 #include <Eigen/Core>
 #include <Eigen/StdVector>
 
@@ -41,8 +42,8 @@ struct InputLayer {
         kernel_.resize(0.0, out_channels);
         bias_.resize(0.0, out_channels);
 
-        reg->new_weight(kernel_);
-        reg->new_weight(bias_);
+        //reg->new_weight(kernel_);
+        //reg->new_weight(bias_);
     }
 
     void process(const TNT* data, size_t number) {
@@ -84,17 +85,15 @@ struct HiddenLayer {
         gate_bias_.resize(0.0, 2 * channels);
         gate_out_.resize(0.0, 2 * channels);
 
-        res_kernel_.resize(0.0,  channels * channels );
-        res_bias_.resize(0.0, channels);
-
         fifo_.resize(0.0, fifo_order_ * channels );
         fifo_cursor_ = 0;
 
-
+        /*
         reg->new_weight(gate_kernel_);
         reg->new_weight(gate_bias_);
         reg->new_weight(res_kernel_);
         reg->new_weight(res_bias_);
+        */
     }
 
     void process(const std::vector<TNT>& data, size_t number, size_t channels) {
@@ -104,7 +103,6 @@ struct HiddenLayer {
         // preparing memory for skip and next out
         if ( skip_out_.size() < number * channels_ ) {
             skip_out_.resize(0.0, number * channels_);
-            next_out_.resize(0.0, number * channels_);
         }
 
         for ( size_t i = 0; i < number; i++) {
@@ -115,10 +113,6 @@ struct HiddenLayer {
 
     const std::vector<TNT>& skip_out() {
         return skip_out_;
-    }
-
-    const std::vector<TNT>& next_out() {
-        return next_out_;
     }
 
 private:
@@ -158,15 +152,6 @@ private:
             skip_out_[t * channels_ + i ] = gate_out_[i];
         }
 
-        // 3. do residual
-        for (size_t i = 0; i < channels_; i++) {
-            TNT out = 0.0;
-            for (size_t j = 0; j < channels_; j++) {
-                out = out + gate_out_[j] * res_kernel_[i * channels_ + j];
-            }
-            out = out + res_bias_[i] + sample[i];
-            next_out_[t * channels_ + i] = out;
-        }
     }
 
     // help functions
@@ -202,12 +187,54 @@ private:
 
     // output
     std::vector<TNT> skip_out_;
-    std::vector<TNT> next_out_;
 };
 
+struct ResLayer {
+    ResLayer(const size_t channels, ParameterRegister* reg) : channels_(channels) {
+        kernel_.resize(0.0, channels * channels);
+        bias_.resize(0.0, channels);
+
+        /*
+        reg->new_weight(kernel_);
+        reg->new_weight(bias_);
+        */
+    }
+
+    void process(const TNT* data, const TNT* gateOut, size_t number) {
+        if ( out_.size() < number *  channels_ ) {
+            out_.resize(0.0, number * channels_ );
+        }
+
+        for ( size_t t = 0; t < number; t++) {
+            for (size_t i = 0; i < channels_; i++) {
+                TNT out = 0.0;
+                for (size_t j = 0; j < channels_; j++) {
+                    out = out + gateOut[t * channels_ + j] * kernel_[i * channels_ + j];
+                }
+                out = out + bias_[i] + data[t * channels_ + i];
+                out_[t * channels_ + i] = out;
+            }
+        }
+    }
+
+    const std::vector<TNT>& output() {
+        return out_;
+    }
+
+private:
+    const size_t channels_;
+    std::vector<TNT> kernel_;
+    std::vector<TNT> bias_;
+    std::vector<TNT> out_;
+};
+
+
+
 struct WaveNet : public ParameterRegister {
-    WaveNet (size_t channels, size_t kernel_size, const std::vector<size_t>& dialations):
+    WaveNet (size_t channels, size_t kernel_size, const std::vector<size_t>& dialations, const char* weight_file):
         channels_(channels), kernel_size_(kernel_size), dialations_(dialations) {
+
+        load_weight(weight_file);
 
         input_ = new InputLayer(channels, this);
         for (size_t i = 0; i < dialations.size(); i++) {
@@ -217,7 +244,12 @@ struct WaveNet : public ParameterRegister {
     }
 
     virtual void new_weight(std::vector<TNT>& w) {
-        // TODO
+
+    }
+
+private:
+    void load_weight(const char* file_name) {
+
     }
 
 private:
