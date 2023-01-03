@@ -13,8 +13,8 @@ struct ParameterRegister {
 
 struct InputLayer {
     InputLayer(const size_t out_channels, ParameterRegister* reg) {
-        kernel_.resize(0.0, out_channels);
-        bias_.resize(0.0, out_channels);
+        kernel_.resize(out_channels);
+        bias_.resize(out_channels);
 
         reg->new_weight(kernel_, bias_);
     }
@@ -39,9 +39,9 @@ struct HiddenLayer {
         channels_(channels), dialation_(dialation), kernel_size_(kernel_size) ,
         fifo_order_( (kernel_size - 1) * dialation + 1) {
 
-        gate_kernel_.resize(0.0, 2 * channels * channels * kernel_size);
-        gate_bias_.resize(0.0, 2 * channels);
-        gate_out_.resize(0.0, 2 * channels);
+        gate_kernel_.resize(2 * channels * channels * kernel_size);
+        gate_bias_.resize(2 * channels);
+        gate_out_.resize(2 * channels);
 
         fifo_.resize(0.0, fifo_order_ * channels );
         fifo_cursor_ = 0;
@@ -94,8 +94,8 @@ private:
 
 struct ResLayer {
     ResLayer(const size_t channels, ParameterRegister* reg) : channels_(channels) {
-        kernel_.resize(0.0, channels * channels);
-        bias_.resize(0.0, channels);
+        kernel_.resize(channels * channels);
+        bias_.resize(channels);
 
         reg->new_weight(kernel_, bias_);
     }
@@ -117,28 +117,21 @@ struct WaveNet : public ParameterRegister {
         channels_(channels), kernel_size_(kernel_size), dialations_(dialations) {
 
         load_weight(weight_file);
-
-        input_ = new InputLayer(channels, this);
-        for (size_t i = 0; i < dialations.size(); i++) {
-            auto hidden = new  HiddenLayer(channels, dialations[i], kernel_size, this);
-            hiddens_.push_back( hidden );
-        }
+        init();
     }
-    virtual ~WaveNet() {
-    }
-
-    virtual void new_weight(std::vector<TNT>& w, std::vector<TNT>& b) {
-
-    }
+    virtual ~WaveNet();
+    virtual void new_weight(std::vector<TNT>& w, std::vector<TNT>& b);
 
 private:
     void load_weight(const char* file_name);
+    void init();
 
 private:
     size_t  channels_;
     size_t  kernel_size_;
     std::vector<size_t> dialations_;
 
+    std::string current_weight_;
     std::map<const std::string, std::vector<TNT>> weights_;
 
     InputLayer* input_;
@@ -158,9 +151,20 @@ struct WaveNetWord : public lr::NativeWord {
 
     virtual void run(Stack& stack) {
         const char* file_name = stack.pop_string();
+        size_t repeat = stack.pop_number();
+        size_t dialation = stack.pop_number();
+        size_t kernel_size = stack.pop_number();
+        size_t channels = stack.pop_number();
+
         if ( net_ == nullptr) {
-            std::vector<size_t> d = {0, 1, 2, 4};
-            net_ = new WaveNet(8, 3, d, file_name);
+            std::vector<size_t> ds;
+            for(size_t r = 0; r < repeat; r++) {
+                for(size_t i = 0; i < dialation; i++) {
+                    ds.push_back( 2 << i );
+                }
+            }
+
+            net_ = new WaveNet(channels, kernel_size, ds, file_name);
             exit(0);
         }
     }

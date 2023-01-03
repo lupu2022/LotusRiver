@@ -121,6 +121,50 @@ void ResLayer::process(const TNT* data, const TNT* gateOut, size_t number) {
     }
 }
 
+
+WaveNet::~WaveNet() {
+
+}
+
+void WaveNet::init() {
+    current_weight_ = "filter.input_layer.";
+    input_ = new InputLayer(channels_, this);
+
+    for (size_t i = 0; i < dialations_.size(); i++) {
+        std::stringstream ss;
+        ss << "filter.hidden." << i << ".";
+        current_weight_ = ss.str();
+
+        auto hidden = new  HiddenLayer(channels_, dialations_[i], kernel_size_, this);
+        hiddens_.push_back( hidden );
+    }
+
+    for (size_t i = 0; i < dialations_.size(); i++) {
+        std::stringstream ss;
+        ss << "filter.residuals." << i << ".";
+        current_weight_ = ss.str();
+
+        auto hidden = new  ResLayer(channels_, this);
+        residuals_.push_back( hidden );
+    }
+
+    current_weight_ = "";
+}
+
+void WaveNet::new_weight(std::vector<TNT>& w, std::vector<TNT>& b) {
+    lr_assert(current_weight_ != "", "target vector name error");
+
+    std::string wname = current_weight_ + "weight";
+    std::vector<TNT>& w_ = weights_[ wname ];
+    lr_assert(w_.size() == w.size(), " weight vector must has same size");
+    w.assign(w_.begin(), w_.end());
+
+    std::string bname = current_weight_ + "bias";
+    std::vector<TNT>& b_ = weights_[ bname ];
+    lr_assert(b_.size() == b.size(), " weight vector must has same size");
+    b.assign(b_.begin(), b_.end());
+}
+
 void WaveNet::load_weight(const char* file_name) {
     std::ifstream wfile(file_name);
     lr_assert(wfile.is_open(), "Can't open weight file");
