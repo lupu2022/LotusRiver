@@ -1,6 +1,7 @@
 #ifndef _NN_CONV_HPP_
 #define _NN_CONV_HPP_
 
+#include <map>
 #include <vector>
 #include "lr.hpp"
 
@@ -123,26 +124,22 @@ struct WaveNet : public ParameterRegister {
             hiddens_.push_back( hidden );
         }
     }
+    virtual ~WaveNet() {
+    }
 
     virtual void new_weight(std::vector<TNT>& w, std::vector<TNT>& b) {
 
     }
 
 private:
-    void load_weight(const char* file_name) {
-        std::ifstream wfile(file_name);
-        lr_assert(wfile.is_open(), "Can't open weight file");
-
-        std::string line;
-        while (getline( wfile, line)){
-            std::cout << " #### " << line << std::endl;
-        }
-    }
+    void load_weight(const char* file_name);
 
 private:
     size_t  channels_;
     size_t  kernel_size_;
     std::vector<size_t> dialations_;
+
+    std::map<const std::string, std::vector<TNT>> weights_;
 
     InputLayer* input_;
     std::vector<HiddenLayer*> hiddens_;
@@ -151,15 +148,26 @@ private:
 
 struct WaveNetWord : public lr::NativeWord {
     WaveNetWord() {
-
+        net_ = nullptr;
     }
     virtual ~WaveNetWord() {
-
+        if ( net_ != nullptr ) {
+            delete net_;
+        }
     }
+
     virtual void run(Stack& stack) {
-
+        const char* file_name = stack.pop_string();
+        if ( net_ == nullptr) {
+            std::vector<size_t> d = {0, 1, 2, 4};
+            net_ = new WaveNet(8, 3, d, file_name);
+            exit(0);
+        }
     }
+
+    NWORD_CREATOR_DEFINE_LR(WaveNetWord)
 private:
+    WaveNet* net_;
 };
 
 

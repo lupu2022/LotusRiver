@@ -26,6 +26,7 @@ std::string fileToString(const char* filename) {
 int main(int argc, const char* argv[] ) {
     lr::Enviroment env(44100);
     lr::io::init_words(env);
+    lr::nn::init_words(env);
 
     std::string codes;
     for (int i = 1; i < argc; i++) {

@@ -121,5 +121,27 @@ void ResLayer::process(const TNT* data, const TNT* gateOut, size_t number) {
     }
 }
 
+void WaveNet::load_weight(const char* file_name) {
+    std::ifstream wfile(file_name);
+    lr_assert(wfile.is_open(), "Can't open weight file");
+
+    std::string line;
+    std::string name;
+    std::vector<TNT> vec;
+    while (getline( wfile, line)){
+        if ( line.find("- ") == 0) {
+            if ( vec.size() > 0 ) {
+                weights_[name] = vec;
+                vec.clear();
+            }
+            name = line.substr(2, line.size() - 3);
+        } else if ( line.find("  - ") == 0 ) {
+            std::stringstream ss(line.substr(4));
+            TNT v;
+            ss >> v;
+            vec.push_back(v);
+        }
+    }
+}
 
 }}}

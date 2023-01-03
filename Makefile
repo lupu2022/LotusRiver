@@ -12,7 +12,7 @@ wavenet.o: lr.hpp nn/wavenet.hpp nn/wavenet.cpp
 
 synth: synth.cpp lr.hpp io/io_impl.hpp nn/nn_impl.hpp wavenet.o 
 	g++ $(FLAGS) -c -o synth.o synth.cpp $(INC)
-	g++ $(FLAGS) -o $@ synth.o $(LINK) 
+	g++ $(FLAGS) -o $@ synth.o wavenet.o $(LINK) 
 
 clean:
 	rm -f synth 
