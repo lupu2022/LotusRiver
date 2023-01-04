@@ -135,6 +135,22 @@ void ResLayer::process(const std::vector<TNT>& data, const std::vector<TNT>& gat
     }
 }
 
+
+void MixerLayer::process(const std::vector<TNT>& gateOut, const size_t layer, const size_t length) {
+    if ( layer == 0 ) {
+        out_.resize( length, bias_[0] );
+    }
+
+    lr_assert( length == out_.size(), "output must has same size");
+    for(size_t t = 0; t < length; t++) {
+        TNT out = 0.0;
+        for (size_t i = 0; i < channels_; i++) {
+            out = out + gateOut[t * channels_ + i] * kernel_[layer * channels_ + i];
+        }
+        out_[t] = out_[t] + out;
+    }
+}
+
 WaveNet::~WaveNet() {
 
 }
@@ -161,6 +177,9 @@ void WaveNet::init() {
         residuals_.push_back( hidden );
     }
 
+    current_weight_ = "filter.linear_mix.";
+    mixer_ = new MixerLayer(channels_, dialations_.size(), this);
+
     current_weight_ = "";
 }
 
@@ -174,6 +193,7 @@ void WaveNet::new_weight(std::vector<TNT>& w, std::vector<TNT>& b) {
 
     std::string bname = current_weight_ + "bias";
     std::vector<TNT>& b_ = weights_[ bname ];
+
     lr_assert(b_.size() == b.size(), " weight vector must has same size");
     b.assign(b_.begin(), b_.end());
 }
@@ -199,6 +219,10 @@ void WaveNet::load_weight(const char* file_name) {
             vec.push_back(v);
         }
     }
+
+    if ( vec.size() > 0 ) {
+        weights_[name] = vec;
+    }
 }
 
 void WaveNet::process(const TNT* data, size_t length) {
@@ -207,16 +231,17 @@ void WaveNet::process(const TNT* data, size_t length) {
     auto out = input_->output();
     for (size_t i = 0; i < dialations_.size(); i++) {
         hiddens_[i]->process( out, length);
-        residuals_[i]->process( out, hiddens_[i]->output(), length);
 
+        mixer_->process( hiddens_[i]->output(), i, length);
+
+        residuals_[i]->process( out, hiddens_[i]->output(), length);
         out = residuals_[i]->output();
     }
 
+    out = mixer_->output();
+
     for (size_t t = 0; t < length; t++) {
-        for (size_t i = 0; i < channels_; i++) {
-            std::cout << out[i + t * channels_] << std::endl;
-        }
-        std::cout << "------------------------" << t << std::endl;
+        std::cout << out[t] << std::endl;
     }
 
     exit(0);

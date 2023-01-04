@@ -99,6 +99,31 @@ private:
     std::vector<TNT> out_;
 };
 
+struct MixerLayer {
+    MixerLayer(const size_t channels, const size_t layers, ParameterRegister* reg) : channels_(channels), layers_(layers) {
+        kernel_.resize(channels * layers);
+        bias_.resize(1);
+
+        reg->new_weight(kernel_, bias_);
+    }
+
+    void process(const std::vector<TNT>& gateOut, const size_t layer, const size_t length);
+
+    const std::vector<TNT>& output() {
+        return out_;
+    }
+
+private:
+    const size_t channels_;
+    const size_t layers_;
+
+    std::vector<TNT> kernel_;
+    std::vector<TNT> bias_;
+
+    std::vector<TNT> out_;
+};
+
+
 struct WaveNet : public ParameterRegister {
     WaveNet (size_t channels, size_t kernel_size, const std::vector<size_t>& dialations, const char* weight_file):
         channels_(channels), kernel_size_(kernel_size), dialations_(dialations) {
@@ -126,6 +151,8 @@ private:
     InputLayer* input_;
     std::vector<HiddenLayer*> hiddens_;
     std::vector<ResLayer*> residuals_;
+    MixerLayer* mixer_;
+
 };
 
 struct WaveNetWord : public lr::NativeWord {
