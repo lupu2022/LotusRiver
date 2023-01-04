@@ -38,6 +38,13 @@ std::ostream& operator<<(std::ostream& os, Stack& stack) {
 }
 
 namespace base {
+    struct Exit : public NativeWord {
+        virtual void run(Stack& stack) {
+            exit(0);
+        }
+        NWORD_CREATOR_DEFINE_LR(Exit)
+    };
+
     struct Dump : public NativeWord {
         virtual void run(Stack& stack) {
             std::cout << stack << std::endl;
@@ -116,6 +123,23 @@ namespace base {
             stack.push_vector( &vec);
         }
         NWORD_CREATOR_DEFINE_LR(Ones)
+    private:
+        Vec vec;
+    };
+
+    struct Numbers : public StaticNativeWord {
+        virtual void run_first(Stack& stack) {
+            size_t len = stack.pop_number();
+            TNT n = stack.pop_number();
+            vec = Vec::Ones(len, 1) * n;
+            stack.push_vector( &vec);
+        }
+        virtual void run_next(Stack& stack) {
+            stack.pop_number();
+            stack.pop_number();
+            stack.push_vector( &vec);
+        }
+        NWORD_CREATOR_DEFINE_LR(Numbers)
     private:
         Vec vec;
     };
@@ -307,9 +331,11 @@ void Enviroment::load_base_math() {
     insert_native_word("rot", base::Rot::creator );
     insert_native_word("~", base::OnlyOnce::creator);
     insert_native_word("?", base::Dump::creator );
+    insert_native_word("^", base::Exit::creator );
 
     insert_native_word("zeros~", base::Zeros::creator );
     insert_native_word("ones~", base::Ones::creator );
+    insert_native_word("numbers~", base::Numbers::creator );
     insert_native_word("randoms~", base::Randoms::creator );
     insert_native_word("matrix~", base::Matrix::creator );
 

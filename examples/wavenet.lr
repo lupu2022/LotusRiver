@@ -2,5 +2,8 @@
 ;
 ; channles, kernel_size, dialation, repeat, weight_file
 ;
-8 3 8 3 "./examples/dizi.yaml" nn.wavenet
+
+0.5 128 numbers~
+
+8 3 8 3 "./examples/dizi.yaml" nn.wavenet ? ^
 

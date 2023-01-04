@@ -172,7 +172,7 @@ void WaveNet::load_weight(const char* file_name) {
     std::string line;
     std::string name;
     std::vector<TNT> vec;
-    while (getline( wfile, line)){
+    while (getline( wfile, line)) {
         if ( line.find("- ") == 0) {
             if ( vec.size() > 0 ) {
                 weights_[name] = vec;
@@ -186,6 +186,10 @@ void WaveNet::load_weight(const char* file_name) {
             vec.push_back(v);
         }
     }
+}
+
+void WaveNet::process(const TNT* data, size_t length) {
+
 }
 
 }}}
