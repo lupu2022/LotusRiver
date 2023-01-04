@@ -87,7 +87,7 @@ struct ResLayer {
         reg->new_weight(kernel_, bias_);
     }
 
-    void process(const TNT* data, const TNT* gateOut, size_t number);
+    void process(const std::vector<TNT>& data, const std::vector<TNT>& gateOut, size_t number);
     const std::vector<TNT>& output() {
         return out_;
     }

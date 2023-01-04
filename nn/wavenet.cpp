@@ -68,7 +68,6 @@ void HiddenLayer::process(const std::vector<TNT>& data, size_t number) {
     for ( size_t i = 0; i < number; i++) {
         processOneSample(sample, i);
         sample = sample + channels_;
-        std::cout << " ------------------------ " << i << std::endl;
     }
 }
 
@@ -105,10 +104,7 @@ void HiddenLayer::processOneSample(const TNT* sample, size_t t) {
         TNT o2 = sigmoid( gate_out_[i + channels_]);
 
         out_[t * channels_ + i ] = o1 * o2;
-
-        std::cout << out_[t * channels_ + i ]  << std::endl;
     }
-
 }
 
 const TNT* HiddenLayer::fifo_get(size_t kernel) {
@@ -119,9 +115,12 @@ const TNT* HiddenLayer::fifo_get(size_t kernel) {
 }
 
 
-void ResLayer::process(const TNT* data, const TNT* gateOut, size_t number) {
+void ResLayer::process(const std::vector<TNT>& data, const std::vector<TNT>& gateOut, size_t number) {
+    lr_assert(data.size() == number * channels_ , "input size is wrong");
+    lr_assert(gateOut.size() == number * channels_, "input size is wrong");
+
     if ( out_.size() < number *  channels_ ) {
-        out_.resize(0.0, number * channels_ );
+        out_.resize(number * channels_, 0.0);
     }
 
     for ( size_t t = 0; t < number; t++) {
@@ -130,12 +129,11 @@ void ResLayer::process(const TNT* data, const TNT* gateOut, size_t number) {
             for (size_t j = 0; j < channels_; j++) {
                 out = out + gateOut[t * channels_ + j] * kernel_[i * channels_ + j];
             }
-            out = out + bias_[i] + data[t * channels_ + i];
-            out_[t * channels_ + i] = out;
+            out = out + bias_[i];
+            out_[t * channels_ + i] = out + data[t * channels_ + i];
         }
     }
 }
-
 
 WaveNet::~WaveNet() {
 
@@ -205,7 +203,23 @@ void WaveNet::load_weight(const char* file_name) {
 
 void WaveNet::process(const TNT* data, size_t length) {
     input_->process(data, length);
-    hiddens_[0] -> process( input_->output(), length);
+
+    auto out = input_->output();
+    for (size_t i = 0; i < dialations_.size(); i++) {
+        hiddens_[i]->process( out, length);
+        residuals_[i]->process( out, hiddens_[i]->output(), length);
+
+        out = residuals_[i]->output();
+    }
+
+    for (size_t t = 0; t < length; t++) {
+        for (size_t i = 0; i < channels_; i++) {
+            std::cout << out[i + t * channels_] << std::endl;
+        }
+        std::cout << "------------------------" << t << std::endl;
+    }
+
+    exit(0);
 }
 
 }}}
