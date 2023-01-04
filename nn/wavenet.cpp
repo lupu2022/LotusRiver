@@ -60,15 +60,14 @@ void HiddenLayer::process(const std::vector<TNT>& data, size_t number) {
     lr_assert(data.size() == number * channels_, "Input must has same channels with define");
 
     // preparing memory for skip and next out
-    if ( skip_out_.size() < number * channels_ ) {
-        skip_out_.resize(number * channels_, 0.0);
+    if ( out_.size() < number * channels_ ) {
+        out_.resize(number * channels_, 0.0);
     }
 
     const TNT* sample = data.data();
     for ( size_t i = 0; i < number; i++) {
-        sample = sample + channels_;
         processOneSample(sample, i);
-
+        sample = sample + channels_;
         std::cout << " ------------------------ " << i << std::endl;
     }
 }
@@ -98,7 +97,6 @@ void HiddenLayer::processOneSample(const TNT* sample, size_t t) {
         out = out + *b;
         gate_out_[i] = out;
 
-        std::cout << out << std::endl;
     }
 
     // 2. gated activation
@@ -106,8 +104,9 @@ void HiddenLayer::processOneSample(const TNT* sample, size_t t) {
         TNT o1 = tanh( gate_out_[i]);
         TNT o2 = sigmoid( gate_out_[i + channels_]);
 
-        gate_out_[i] = o1 * o2;
-        skip_out_[t * channels_ + i ] = gate_out_[i];
+        out_[t * channels_ + i ] = o1 * o2;
+
+        std::cout << out_[t * channels_ + i ]  << std::endl;
     }
 
 }
@@ -206,7 +205,7 @@ void WaveNet::load_weight(const char* file_name) {
 
 void WaveNet::process(const TNT* data, size_t length) {
     input_->process(data, length);
-    hiddens_[1]->process( input_->output(),  length);
+    hiddens_[0] -> process( input_->output(), length);
 }
 
 }}}

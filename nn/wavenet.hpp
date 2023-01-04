@@ -50,8 +50,8 @@ struct HiddenLayer {
     }
 
     void process(const std::vector<TNT>& data, size_t number);
-    const std::vector<TNT>& skip_out() {
-        return skip_out_;
+    const std::vector<TNT>& output() {
+        return out_;
     }
 
 private:
@@ -76,7 +76,7 @@ private:
     size_t fifo_cursor_;
 
     // output
-    std::vector<TNT> skip_out_;
+    std::vector<TNT> out_;
 };
 
 struct ResLayer {
@@ -156,7 +156,6 @@ struct WaveNetWord : public lr::NativeWord {
         }
 
         auto v = stack.pop_vector();
-
         net_->process(v->data(), v->size());
     }
 
