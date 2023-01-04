@@ -49,7 +49,7 @@ struct HiddenLayer {
         reg->new_weight(gate_kernel_, gate_bias_);
     }
 
-    void process(const std::vector<TNT>& data, size_t number, size_t channels);
+    void process(const std::vector<TNT>& data, size_t number);
     const std::vector<TNT>& skip_out() {
         return skip_out_;
     }

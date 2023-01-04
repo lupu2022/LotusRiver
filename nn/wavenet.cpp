@@ -37,11 +37,10 @@ namespace lr { namespace nn { namespace wavenet {
 
 void InputLayer::process(const TNT* data, size_t number) {
     if ( out_.size() < number *  kernel_.size() ) {
-        out_.resize(0.0, number * kernel_.size() );
+        out_.resize(number * kernel_.size(), 0.0 );
     }
 
     // change input from 1 channel to multipule channels
-    #pragma omp parallel
     for (size_t i = 0; i < number; i++) {
         TNT* target = out_.data() + i * kernel_.size();
 
@@ -51,9 +50,8 @@ void InputLayer::process(const TNT* data, size_t number) {
     }
 }
 
-void HiddenLayer::process(const std::vector<TNT>& data, size_t number, size_t channels) {
-    lr_assert(channels == channels_, "Input must has same channels with define");
-    lr_assert(data.size() == number * channels, "Input must has same channels with define");
+void HiddenLayer::process(const std::vector<TNT>& data, size_t number) {
+    lr_assert(data.size() == number * channels_, "Input must has same channels with define");
 
     // preparing memory for skip and next out
     if ( skip_out_.size() < number * channels_ ) {
@@ -61,7 +59,7 @@ void HiddenLayer::process(const std::vector<TNT>& data, size_t number, size_t ch
     }
 
     for ( size_t i = 0; i < number; i++) {
-        const TNT* sample = data.data() + i * channels;
+        const TNT* sample = data.data() + i * channels_;
         processOneSample(sample, i);
     }
 }
@@ -189,7 +187,8 @@ void WaveNet::load_weight(const char* file_name) {
 }
 
 void WaveNet::process(const TNT* data, size_t length) {
-
+    input_->process(data, length);
+    hiddens_[0]->process( input_->output(),  length);
 }
 
 }}}
