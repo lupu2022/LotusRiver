@@ -35,6 +35,12 @@ def forward(self, x):
 
 namespace lr { namespace nn { namespace wavenet {
 
+
+// help functions
+float sigmoid(float x) {
+    return 1.0f / (1.0f + expf(-x));
+}
+
 void InputLayer::process(const TNT* data, size_t number) {
     if ( out_.size() < number *  kernel_.size() ) {
         out_.resize(number * kernel_.size(), 0.0 );
@@ -55,12 +61,15 @@ void HiddenLayer::process(const std::vector<TNT>& data, size_t number) {
 
     // preparing memory for skip and next out
     if ( skip_out_.size() < number * channels_ ) {
-        skip_out_.resize(0.0, number * channels_);
+        skip_out_.resize(number * channels_, 0.0);
     }
 
+    const TNT* sample = data.data();
     for ( size_t i = 0; i < number; i++) {
-        const TNT* sample = data.data() + i * channels_;
+        sample = sample + channels_;
         processOneSample(sample, i);
+
+        std::cout << " ------------------------ " << i << std::endl;
     }
 }
 
@@ -83,12 +92,13 @@ void HiddenLayer::processOneSample(const TNT* sample, size_t t) {
         for (size_t j = 0; j < kernel_size_; j++) {
             const TNT* x = fifo_get(j);
             for (size_t k = 0; k < channels_; k++) {
-                out = out + x[k] * w[j * channels_ + k];
+                out = out + x[k] * w[j + k * kernel_size_];
             }
         }
         out = out + *b;
-
         gate_out_[i] = out;
+
+        std::cout << out << std::endl;
     }
 
     // 2. gated activation
@@ -101,6 +111,14 @@ void HiddenLayer::processOneSample(const TNT* sample, size_t t) {
     }
 
 }
+
+const TNT* HiddenLayer::fifo_get(size_t kernel) {
+    int pos = (int)fifo_cursor_ + kernel * dialation_;
+    pos = pos % (int)fifo_order_;
+
+    return fifo_.data() + pos * channels_;
+}
+
 
 void ResLayer::process(const TNT* data, const TNT* gateOut, size_t number) {
     if ( out_.size() < number *  channels_ ) {
@@ -188,7 +206,7 @@ void WaveNet::load_weight(const char* file_name) {
 
 void WaveNet::process(const TNT* data, size_t length) {
     input_->process(data, length);
-    hiddens_[0]->process( input_->output(),  length);
+    hiddens_[1]->process( input_->output(),  length);
 }
 
 }}}

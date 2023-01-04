@@ -43,7 +43,7 @@ struct HiddenLayer {
         gate_bias_.resize(2 * channels);
         gate_out_.resize(2 * channels);
 
-        fifo_.resize(0.0, fifo_order_ * channels );
+        fifo_.resize(fifo_order_ * channels, 0.0);
         fifo_cursor_ = 0;
 
         reg->new_weight(gate_kernel_, gate_bias_);
@@ -56,20 +56,7 @@ struct HiddenLayer {
 
 private:
     void processOneSample(const TNT* sample, size_t t);
-
-    // help functions
-    float sigmoid(float x) {
-        return 1.0f / (1.0f + expf(-x));
-    }
-
-    const TNT* fifo_get(size_t kernel) {
-        int pos = (int)fifo_cursor_ - 1 - kernel;
-        pos = pos % (int)fifo_order_;
-        if ( pos < 0 ) {
-            pos = pos + (int)fifo_order_;
-        }
-        return fifo_.data() + pos * channels_;
-    }
+    const TNT* fifo_get(size_t kernel);
 
 private:
     const size_t channels_;
@@ -162,7 +149,7 @@ struct WaveNetWord : public lr::NativeWord {
             std::vector<size_t> ds;
             for(size_t r = 0; r < repeat; r++) {
                 for(size_t i = 0; i < dialation; i++) {
-                    ds.push_back( 2 << i );
+                    ds.push_back( 1 << i );
                 }
             }
             net_ = new WaveNet(channels, kernel_size, ds, file_name);
