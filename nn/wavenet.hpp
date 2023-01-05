@@ -184,6 +184,8 @@ struct WaveNetWord : public lr::NativeWord {
 
         auto v = stack.pop_vector();
         net_->process(v->data(), v->size());
+
+
     }
 
     NWORD_CREATOR_DEFINE_LR(WaveNetWord)

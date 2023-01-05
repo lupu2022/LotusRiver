@@ -237,14 +237,6 @@ void WaveNet::process(const TNT* data, size_t length) {
         residuals_[i]->process( out, hiddens_[i]->output(), length);
         out = residuals_[i]->output();
     }
-
-    out = mixer_->output();
-
-    for (size_t t = 0; t < length; t++) {
-        std::cout << out[t] << std::endl;
-    }
-
-    exit(0);
 }
 
 }}}

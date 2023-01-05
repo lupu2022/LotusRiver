@@ -5,5 +5,5 @@
 
 0.5 128 numbers~
 
-8 3 8 3 "./examples/dizi.yaml" nn.wavenet ? ^
+8 3 8 3 "./examples/assets/dizi.yaml" nn.wavenet ? ^
 
