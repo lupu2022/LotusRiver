@@ -1,1 +1,5 @@
-440 32 "SampleRate" @~ faust.osc.square 0.5 swap * ("SampleRate" @~ "test.wav" io.mono_wav)
+"./examples/assets/perf.mat" io.read_perf swap 
+
+160 "SampleRate" @~ faust.osc.sawtooth  * 
+
+("SampleRate" @~ "test.wav" io.mono_wav)
