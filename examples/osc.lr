@@ -1,1 +1,1 @@
-"BlockSize" @~ faust.osc.noise 0.5 swap * ("SampleRate" @~ "test.wav" io.mono_wav)
+440 "BlockSize" @~ "SampleRate" @~ faust.osc.sine 0.5 swap * ("SampleRate" @~ "test.wav" io.mono_wav)
