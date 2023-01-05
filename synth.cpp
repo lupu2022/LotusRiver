@@ -25,7 +25,7 @@ std::string fileToString(const char* filename) {
 }
 
 int main(int argc, const char* argv[] ) {
-    lr::Enviroment env(44100);
+    lr::Enviroment env(16000);
     lr::io::init_words(env);
     lr::faust::init_words(env);
     lr::nn::init_words(env);
@@ -37,7 +37,7 @@ int main(int argc, const char* argv[] ) {
     }
 
     auto rt = env.build(codes);
-    for (size_t i = 0; i < 44100; i++) {
+    for (size_t i = 0; i < 16000; i++) {
         rt.run();
     }
 }

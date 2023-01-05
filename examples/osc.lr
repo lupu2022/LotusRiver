@@ -1,1 +1,1 @@
-440 "BlockSize" @~ "SampleRate" @~ faust.osc.square 0.5 swap * ("SampleRate" @~ "test.wav" io.mono_wav)
+440 32 "SampleRate" @~ faust.osc.square 0.5 swap * ("SampleRate" @~ "test.wav" io.mono_wav)

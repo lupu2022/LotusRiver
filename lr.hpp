@@ -108,14 +108,6 @@ struct Cell {
         }
         return false;
     }
-    bool is_null() {
-        if ( type_ == T_String ) {
-            if (v._str == NULL) {
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 std::ostream& operator<<(std::ostream& os, const Cell& c);
@@ -385,7 +377,6 @@ struct Enviroment {
 
     Enviroment(int sr, int bs = 32) {
         settings_["SampleRate"] = SettingValue(sr);
-        settings_["BlockSize"] = SettingValue(bs);
         load_base_math();
     }
     ~Enviroment() {}

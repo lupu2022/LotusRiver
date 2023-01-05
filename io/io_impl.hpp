@@ -6,6 +6,49 @@
 
 namespace lr { namespace io {
 
+struct PerfReader : public NativeWord {
+    PerfReader() {
+        in_sf = nullptr;
+    }
+
+    virtual ~PerfReader() {
+        if ( in_sf != nullptr ) {
+            sf_close(in_sf);
+        }
+    }
+
+    virtual void run(Stack& stack) {
+        const char* file_name = stack.pop_string();
+
+        if ( in_sf == nullptr) {
+            const int sr = 16000;
+            SF_INFO in_info = { sr, sr, 3, SF_FORMAT_MAT5 | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE, 0, 0};
+            in_sf = sf_open(file_name, SFM_READ, &in_info);
+        }
+
+        float buf[3];
+        int count = sf_read_float(in_sf, buf, 3);
+        if ( count != 3) {
+            sf_seek(in_sf, 0, SF_SEEK_SET);
+            stack.push_number(0);
+            stack.push_number(0);
+            return;
+        }
+
+        float p = buf[0];
+        //float c = buf[1];
+        float l = buf[2];
+
+        stack.push_number(p);
+        stack.push_number(l);
+    }
+
+    NWORD_CREATOR_DEFINE_LR(PerfReader)
+private:
+    SNDFILE* in_sf;
+};
+
+
 struct MonoWavOut : public NativeWord {
     MonoWavOut() {
         out_sf = nullptr;
@@ -43,6 +86,7 @@ private:
 
 void init_words(Enviroment& env) {
     env.insert_native_word("io.mono_wav", MonoWavOut::creator);
+    env.insert_native_word("io.read_perf", PerfReader::creator);
 }
 
 }}
