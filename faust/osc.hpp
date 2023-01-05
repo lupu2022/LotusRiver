@@ -6,8 +6,10 @@
 
 namespace dsp {
     class OscSine;
-    class OscNoise;
     class OscSawtooth;
+    class OscSquare;
+
+    class NoiseWhite;
 }
 
 namespace lr { namespace faust {
@@ -25,17 +27,6 @@ private:
     Vec vec;
 };
 
-struct OscNoiseWord : public NativeWord {
-    OscNoiseWord() { dsp = nullptr; }
-    virtual ~OscNoiseWord();
-    virtual void run(Stack& stack);
-
-    NWORD_CREATOR_DEFINE_LR(OscNoiseWord)
-private:
-    dsp::OscNoise* dsp;
-    dsp::UI ui;
-    Vec vec;
-};
 
 struct OscSawtoothWord : public NativeWord {
     OscSawtoothWord() { dsp = nullptr; }
@@ -48,6 +39,32 @@ private:
     dsp::UI ui;
     Vec vec;
 };
+
+struct OscSquareWord : public NativeWord {
+    OscSquareWord() { dsp = nullptr; }
+    virtual ~OscSquareWord();
+    virtual void run(Stack& stack);
+
+    NWORD_CREATOR_DEFINE_LR(OscSquareWord)
+private:
+    dsp::OscSquare* dsp;
+    dsp::UI ui;
+    Vec vec;
+};
+
+
+struct NoiseWhiteWord : public NativeWord {
+    NoiseWhiteWord() { dsp = nullptr; }
+    virtual ~NoiseWhiteWord();
+    virtual void run(Stack& stack);
+
+    NWORD_CREATOR_DEFINE_LR(NoiseWhiteWord)
+private:
+    dsp::NoiseWhite* dsp;
+    dsp::UI ui;
+    Vec vec;
+};
+
 
 }}
 

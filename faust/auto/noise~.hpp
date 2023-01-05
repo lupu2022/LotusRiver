@@ -1,11 +1,11 @@
 /* ------------------------------------------------------------
 name: "noise"
 Code generated with Faust 2.54.8 (https://faust.grame.fr)
-Compilation options: -lang cpp -light -cn OscNoise -es 1 -mcd 16 -single -ftz 0
+Compilation options: -lang cpp -light -cn NoiseWhite -es 1 -mcd 16 -single -ftz 0
 ------------------------------------------------------------ */
 
-#ifndef  __OscNoise_H__
-#define  __OscNoise_H__
+#ifndef  __NoiseWhite_H__
+#define  __NoiseWhite_H__
 
 #ifndef FAUSTFLOAT
 #define FAUSTFLOAT float
@@ -18,7 +18,7 @@ Compilation options: -lang cpp -light -cn OscNoise -es 1 -mcd 16 -single -ftz 0
 namespace dsp {
 
 #ifndef FAUSTCLASS 
-#define FAUSTCLASS OscNoise
+#define FAUSTCLASS NoiseWhite
 #endif
 
 #ifdef __APPLE__ 
@@ -33,7 +33,7 @@ namespace dsp {
 #endif
 
 
-class OscNoise : public dsp {
+class NoiseWhite : public dsp {
 	
  private:
 	
@@ -43,7 +43,7 @@ class OscNoise : public dsp {
  public:
 	
 	void metadata(Meta* m) { 
-		m->declare("compile_options", "-lang cpp -light -cn OscNoise -es 1 -mcd 16 -single -ftz 0");
+		m->declare("compile_options", "-lang cpp -light -cn NoiseWhite -es 1 -mcd 16 -single -ftz 0");
 		m->declare("filename", "noise.dsp");
 		m->declare("name", "noise");
 		m->declare("noises.lib/name", "Faust Noise Generator Library");
@@ -83,8 +83,8 @@ class OscNoise : public dsp {
 		instanceClear();
 	}
 	
-	virtual OscNoise* clone() {
-		return new OscNoise();
+	virtual NoiseWhite* clone() {
+		return new NoiseWhite();
 	}
 	
 	virtual int getSampleRate() {
