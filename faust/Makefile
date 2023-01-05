@@ -4,6 +4,8 @@ endef
   
 all:
 	$(call dsp2hpp,sawtooth,OscSawtooth)
-  
+	$(call dsp2hpp,noise,OscNoise)
+	$(call dsp2hpp,osc,OscSine)
+
 clean:
 	rm -rf auto/*.hpp
