@@ -1,0 +1,9 @@
+define dsp2hpp
+    faust -light -o auto/$(1).hpp -ns faust -cn $(2) dsp/$(1).dsp 
+endef
+  
+all:
+	$(call dsp2hpp,sawtooth,OscSawtooth)
+  
+clean:
+	rm -rf auto/*.hpp
