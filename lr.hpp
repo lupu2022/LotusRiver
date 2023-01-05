@@ -383,7 +383,7 @@ using UserBinary = std::vector<WordByte>;
 struct Enviroment {
     using SettingValue = std::variant<bool, int, TNT>;
 
-    Enviroment(int sr, int bs = 64) {
+    Enviroment(int sr, int bs = 32) {
         settings_["SampleRate"] = SettingValue(sr);
         settings_["BlockSize"] = SettingValue(bs);
         load_base_math();

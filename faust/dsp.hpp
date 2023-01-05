@@ -9,7 +9,7 @@
 
 namespace dsp {
 
-class dsp {};
+class dsp { };
 class Meta {
 public:
     virtual void declare(const char* key, const char* value) {}

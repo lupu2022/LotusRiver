@@ -1,6 +1,6 @@
 .PHONY: all
 
-FLAGS = -std=c++17 -Wall -Wno-maybe-uninitialized -fopenmp -O3
+FLAGS = -std=c++17 -Wall -Wno-maybe-uninitialized -Wno-delete-non-virtual-dtor -fopenmp -O3
 INC = -I. -I./eigen3
 
 LINK = -lsndfile -lpthread -lm

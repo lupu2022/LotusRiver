@@ -7,9 +7,9 @@
 namespace lr { namespace faust {
 
 void init_words(Enviroment& env) {
-    env.insert_native_word("fasut.osc.sine", OscSineWord::creator);
-    env.insert_native_word("fasut.osc.noise", OscNoiseWord::creator);
-    env.insert_native_word("fasut.osc.sawtooth", OscSawtoothWord::creator);
+    env.insert_native_word("faust.osc.sine", OscSineWord::creator);
+    env.insert_native_word("faust.osc.noise", OscNoiseWord::creator);
+    env.insert_native_word("faust.osc.sawtooth", OscSawtoothWord::creator);
 }
 
 }}

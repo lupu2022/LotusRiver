@@ -2,6 +2,7 @@
 #define _FAUST_OSC_HPP_
 
 #include "lr.hpp"
+#include "faust/dsp.hpp"
 
 namespace dsp {
     class OscSine;
@@ -12,36 +13,40 @@ namespace dsp {
 namespace lr { namespace faust {
 
 struct OscSineWord : public NativeWord {
-    OscSineWord() { }
-    virtual ~OscSineWord() { }
-
+    OscSineWord() { dsp = nullptr; }
+    virtual ~OscSineWord();
     virtual void run(Stack& stack);
 
     NWORD_CREATOR_DEFINE_LR(OscSineWord)
+
 private:
     dsp::OscSine* dsp;
+    dsp::UI ui;
+    Vec vec;
 };
 
 struct OscNoiseWord : public NativeWord {
-    OscNoiseWord() { }
-    virtual ~OscNoiseWord() { }
-
+    OscNoiseWord() { dsp = nullptr; }
+    virtual ~OscNoiseWord();
     virtual void run(Stack& stack);
 
     NWORD_CREATOR_DEFINE_LR(OscNoiseWord)
 private:
     dsp::OscNoise* dsp;
+    dsp::UI ui;
+    Vec vec;
 };
 
 struct OscSawtoothWord : public NativeWord {
-    OscSawtoothWord() { }
-    virtual ~OscSawtoothWord() { }
-
+    OscSawtoothWord() { dsp = nullptr; }
+    virtual ~OscSawtoothWord();
     virtual void run(Stack& stack);
 
     NWORD_CREATOR_DEFINE_LR(OscSawtoothWord)
 private:
     dsp::OscSawtooth* dsp;
+    dsp::UI ui;
+    Vec vec;
 };
 
 }}
