@@ -6,6 +6,7 @@
 #include <chrono>
 
 #include "lr.hpp"
+#include "faust/faust_impl.hpp"
 #include "io/io_impl.hpp"
 #include "nn/nn_impl.hpp"
 

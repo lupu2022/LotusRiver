@@ -5,7 +5,9 @@
 #define FAUSTFLOAT float
 #endif
 
-namespace faust {
+#include <string.h>
+
+namespace dsp {
 
 class dsp {};
 class Meta {
@@ -29,7 +31,6 @@ public:
     }
 
     virtual void closeBox() {}
-
 
     FAUSTFLOAT* gain;
     FAUSTFLOAT* gate;
