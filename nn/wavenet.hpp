@@ -188,13 +188,14 @@ struct WaveNetWord : public lr::NativeWord {
         auto v = stack.pop_vector();
         net_->process(v->data(), v->size());
 
+        // copy to output
         auto out = net_->output();
-
         if ( vec.size() != (int)out.size() ) {
             vec = Vec::Zero(out.size(), 1);
         }
+        auto d = vec.data();
         for (size_t i = 0; i < out.size(); i++) {
-            vec.data()[i] = out[i];
+            d[i] = out[i];
         }
 
         stack.push_vector(&vec);
