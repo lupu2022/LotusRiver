@@ -24,5 +24,5 @@ synth: synth.cpp lr.hpp io/io_impl.hpp nn/nn_impl.hpp faust/faust_impl.hpp \
 	g++ $(FLAGS) -o $@ synth.o lr.o nn_wavenet.o faust_osc.o $(LINK) 
 
 clean:
-	rm -f synth 
+	rm -f synth
 	rm -f *.o
