@@ -135,7 +135,6 @@ void ResLayer::process(const std::vector<TNT>& data, const std::vector<TNT>& gat
     }
 }
 
-
 void MixerLayer::process(const std::vector<TNT>& gateOut, const size_t layer, const size_t length) {
     if ( layer == 0 ) {
         out_.resize( length, bias_[0] );
