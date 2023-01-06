@@ -135,6 +135,9 @@ struct WaveNet : public ParameterRegister {
     virtual void new_weight(std::vector<TNT>& w, std::vector<TNT>& b);
 
     void process(const TNT* data, size_t length);
+    const std::vector<TNT>& output() {
+        return mixer_->output();
+    }
 
 private:
     void load_weight(const char* file_name);
@@ -185,12 +188,22 @@ struct WaveNetWord : public lr::NativeWord {
         auto v = stack.pop_vector();
         net_->process(v->data(), v->size());
 
+        auto out = net_->output();
 
+        if ( vec.size() != (int)out.size() ) {
+            vec = Vec::Zero(out.size(), 1);
+        }
+        for (size_t i = 0; i < out.size(); i++) {
+            vec.data()[i] = out[i];
+        }
+
+        stack.push_vector(&vec);
     }
 
     NWORD_CREATOR_DEFINE_LR(WaveNetWord)
 private:
     WaveNet* net_;
+    Vec vec;
 };
 
 
