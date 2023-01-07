@@ -43,7 +43,7 @@ float sigmoid(float x) {
 
 void InputLayer::process(const TNT* data, size_t number) {
     if ( out_.size() < number *  kernel_.size() ) {
-        out_.resize(number * kernel_.size(), 0.0 );
+        out_.resize(number * kernel_.size());
     }
 
     // change input from 1 channel to multipule channels
@@ -61,7 +61,7 @@ void HiddenLayer::process(const std::vector<TNT>& data, size_t number) {
 
     // preparing memory for skip and next out
     if ( out_.size() < number * channels_ ) {
-        out_.resize(number * channels_, 0.0);
+        out_.resize(number * channels_);
     }
 
     const TNT* sample = data.data();
@@ -95,7 +95,6 @@ void HiddenLayer::processOneSample(const TNT* sample, size_t t) {
         }
         out = out + *b;
         gate_out_[i] = out;
-
     }
 
     // 2. gated activation
@@ -120,7 +119,7 @@ void ResLayer::process(const std::vector<TNT>& data, const std::vector<TNT>& gat
     lr_assert(gateOut.size() == number * channels_, "input size is wrong");
 
     if ( out_.size() < number *  channels_ ) {
-        out_.resize(number * channels_, 0.0);
+        out_.resize(number * channels_);
     }
 
     for ( size_t t = 0; t < number; t++) {
@@ -137,7 +136,10 @@ void ResLayer::process(const std::vector<TNT>& data, const std::vector<TNT>& gat
 
 void MixerLayer::process(const std::vector<TNT>& gateOut, const size_t layer, const size_t length) {
     if ( layer == 0 ) {
-        out_.resize( length, bias_[0] );
+        if ( out_.size() != length) {
+            out_.resize(length);
+        }
+        std::fill(out_.begin(), out_.end(), bias_[0]);
     }
 
     lr_assert( length == out_.size(), "output must has same size");
