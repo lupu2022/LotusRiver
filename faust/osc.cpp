@@ -2,6 +2,7 @@
 #include "faust/auto/osc~.hpp"
 #include "faust/auto/sawtooth~.hpp"
 #include "faust/auto/square~.hpp"
+#include "faust/auto/triangle~.hpp"
 #include "faust/auto/noise~.hpp"
 
 #include "lr.hpp"
@@ -81,6 +82,31 @@ void OscSquareWord::run(Stack& stack) {
 
     stack.push_vector(&vec);
 }
+
+OscTriangleWord::~OscTriangleWord() {
+    if ( dsp != nullptr ) {
+        delete dsp;
+    }
+}
+void OscTriangleWord::run(Stack& stack) {
+    int sr = stack.pop_number();
+    int bs = stack.pop_number();
+    TNT freq = stack.pop_number();
+    if ( dsp == nullptr) {
+        dsp = new dsp::OscTriangle();
+        dsp->init(sr);
+        dsp->buildUserInterface(&ui);
+
+        vec = Vec::Zero(bs, 1);
+    }
+
+    *ui.freq = freq;
+    TNT* d = vec.data();
+    dsp->compute(bs, nullptr, &d);
+
+    stack.push_vector(&vec);
+}
+
 
 NoiseWhiteWord::~NoiseWhiteWord() {
     if ( dsp != nullptr ) {

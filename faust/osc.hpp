@@ -8,6 +8,7 @@ namespace dsp {
     class OscSine;
     class OscSawtooth;
     class OscSquare;
+    class OscTriangle;
 
     class NoiseWhite;
 }
@@ -48,6 +49,18 @@ struct OscSquareWord : public NativeWord {
     NWORD_CREATOR_DEFINE_LR(OscSquareWord)
 private:
     dsp::OscSquare* dsp;
+    dsp::UI ui;
+    Vec vec;
+};
+
+struct OscTriangleWord : public NativeWord {
+    OscTriangleWord() { dsp = nullptr; }
+    virtual ~OscTriangleWord();
+    virtual void run(Stack& stack);
+
+    NWORD_CREATOR_DEFINE_LR(OscTriangleWord)
+private:
+    dsp::OscTriangle* dsp;
     dsp::UI ui;
     Vec vec;
 };
