@@ -8,6 +8,7 @@ all:
 	$(call dsp2hpp,square,OscSquare)
 	$(call dsp2hpp,triangle,OscTriangle)
 	$(call dsp2hpp,noise,NoiseWhite)
+	$(call dsp2hpp,freeverb,ReFreeverb)
 
 clean:
 	rm -rf auto/*.hpp
