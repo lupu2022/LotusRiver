@@ -1,8 +1,8 @@
 
-"./examples/assets/shaolinsi.perf" io.read_perf 0.25 * swap      ; output : loudness freq
+"./examples/assets/violin.perf" io.read_perf 0.25 * swap      ; output : loudness freq
 
 160 "SampleRate" @~ faust.osc.sawtooth  *           ; loudness * osc(freq)
 
-8 3 8 3 "./examples/assets/xiao.yaml" nn.wavenet
+8 3 8 3 "./examples/assets/harmonic.yaml" nn.wavenet
 
 ("SampleRate" @~ "test.wav" io.mono_wav)
