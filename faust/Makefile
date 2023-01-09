@@ -6,7 +6,7 @@ all:
 	$(call dsp2hpp,sawtooth,OscSawtooth)
 	$(call dsp2hpp,osc,OscSine)
 	$(call dsp2hpp,square,OscSquare)
-	$(call dsp2hpp,triangle,OscTriangle))
+	$(call dsp2hpp,triangle,OscTriangle)
 	$(call dsp2hpp,noise,NoiseWhite)
 
 clean:
