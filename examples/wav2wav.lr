@@ -1,6 +1,6 @@
 
 64 "./examples/assets/singing.wav" io.read_wav
 
-8 3 8 3 "./examples/assets/dizi.yaml" nn.wavenet
+8 3 8 3 "./examples/assets/xiao.yaml" nn.wavenet
 
 ("SampleRate" @~ "test.wav" io.mono_wav)

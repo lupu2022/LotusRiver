@@ -24,6 +24,8 @@ struct PerfReader : public NativeWord {
             const int sr = 16000;
             SF_INFO in_info = { sr, sr, 3, SF_FORMAT_MAT5 | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE, 0, 0};
             in_sf = sf_open(file_name, SFM_READ, &in_info);
+
+            lr_assert(in_sf != nullptr , "Can't open perf file");
         }
 
         float buf[3];
