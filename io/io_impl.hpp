@@ -48,6 +48,56 @@ private:
     SNDFILE* in_sf;
 };
 
+struct WavReader : public NativeWord {
+    WavReader() {
+        in_sf = nullptr;
+    }
+
+    virtual ~WavReader() {
+        if ( in_sf != nullptr ) {
+            sf_close(in_sf);
+        }
+    }
+
+    virtual void run(Stack& stack) {
+        const char* file_name = stack.pop_string();
+        const size_t bs = stack.pop_number();
+
+        if ( in_sf == nullptr) {
+            SF_INFO in_info;
+            memset (&in_info, 0, sizeof (in_info)) ;
+            in_sf = sf_open(file_name, SFM_READ, &in_info);
+
+            lr_assert(in_sf != nullptr, "Can't open wav file");
+            lr_assert(in_info.channels == 1, "WavReader only support mono");
+
+            vec = Vec::Zero(bs, 1);
+        }
+
+        lr_assert( vec.size() == (int)bs , "block size should be fixed");
+
+        float buf[bs];
+        size_t count = sf_read_float(in_sf, buf, bs);
+        if ( count != bs) {
+            sf_seek(in_sf, 0, SF_SEEK_SET);
+
+            count = sf_read_float(in_sf, buf, bs);
+            lr_assert( count == bs, "can't read target block size");
+        }
+
+        auto d = vec.data();
+        for (size_t i = 0; i < bs; i++) {
+            d[i] = buf[i];
+        }
+
+        stack.push_vector(&vec);
+    }
+
+    NWORD_CREATOR_DEFINE_LR(WavReader)
+private:
+    SNDFILE* in_sf;
+    Vec vec;
+};
 
 struct MonoWavOut : public NativeWord {
     MonoWavOut() {
@@ -87,6 +137,7 @@ private:
 void init_words(Enviroment& env) {
     env.insert_native_word("io.mono_wav", MonoWavOut::creator);
     env.insert_native_word("io.read_perf", PerfReader::creator);
+    env.insert_native_word("io.read_wav", WavReader::creator);
 }
 
 }}
