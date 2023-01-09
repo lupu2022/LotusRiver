@@ -19,7 +19,7 @@ struct ReFreeverbWord : public NativeWord {
 
 private:
     dsp::ReFreeverb* dsp;
-    Vec vec;
+    Vec out;
 };
 
 }}
