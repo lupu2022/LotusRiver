@@ -13,6 +13,9 @@ io_rtaudio.o: io/RtAudio.cpp io/RtAudio.h
 io_rtmidi.o: io/RtMidi.cpp io/RtMidi.h
 	g++ $(FLAGS) -c -o $@ io/RtMidi.cpp $(INC) 
 
+io_impl.o: io/io_impl.hpp io/io_impl.cpp
+	g++ $(FLAGS) -c -o $@ io/io_impl.cpp $(INC) 
+
 nn_wavenet.o: lr.hpp nn/wavenet.hpp nn/wavenet.cpp
 	g++ $(FLAGS) -c -o $@ nn/wavenet.cpp $(INC) 
 
@@ -29,11 +32,13 @@ synth: synth.cpp lr.hpp io/io_impl.hpp nn/nn_impl.hpp faust/faust_impl.hpp \
 	lr.o \
 	io_rtaudio.o \
 	io_rtmidi.o \
+	io_impl.o \
 	nn_wavenet.o \
 	faust_osc.o \
 	faust_reverb.o
 	g++ $(FLAGS) -c -o synth.o synth.cpp $(INC)
-	g++ $(FLAGS) -o $@ synth.o lr.o io_rtaudio.o nn_wavenet.o faust_osc.o faust_reverb.o $(LINK) 
+	g++ $(FLAGS) -o $@ synth.o lr.o io_impl.o io_rtaudio.o io_rtmidi.o \
+					   nn_wavenet.o faust_osc.o faust_reverb.o $(LINK) 
 
 clean:
 	rm -f synth
