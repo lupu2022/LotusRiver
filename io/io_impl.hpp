@@ -98,11 +98,11 @@ private:
     Vec vec;
 };
 
-struct MonoWavOut : public NativeWord {
-    MonoWavOut() {
+struct WavWriter : public NativeWord {
+    WavWriter() {
         out_sf = nullptr;
     }
-    virtual ~MonoWavOut() {
+    virtual ~WavWriter() {
         if ( out_sf != nullptr ) {
             sf_close(out_sf);
         }
@@ -111,9 +111,12 @@ struct MonoWavOut : public NativeWord {
     virtual void run(Stack& stack) {
         const char* file_name = stack.pop_string();
         int sr = stack.pop_number();
+        int ch = stack.pop_number();
+
+        lr_assert(ch == 1, "Current only support mono mode!");
 
         if ( out_sf == nullptr) {
-            SF_INFO out_info = { sr, sr, 1, SF_FORMAT_WAV | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE, 0, 0};
+            SF_INFO out_info = { sr, sr, ch, SF_FORMAT_WAV | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE, 0, 0};
             out_sf = sf_open(file_name, SFM_WRITE, &out_info);
         }
 
@@ -128,14 +131,14 @@ struct MonoWavOut : public NativeWord {
         sf_write_float(out_sf, v->data(), s);
     }
 
-    NWORD_CREATOR_DEFINE_LR(MonoWavOut)
+    NWORD_CREATOR_DEFINE_LR(WavWriter)
 private:
     SNDFILE* out_sf;
 };
 
 
 void init_words(Enviroment& env) {
-    env.insert_native_word("io.mono_wav", MonoWavOut::creator);
+    env.insert_native_word("io.write_wav", WavWriter::creator);
     env.insert_native_word("io.read_mat", MatReader::creator);
     env.insert_native_word("io.read_wav", WavReader::creator);
 }

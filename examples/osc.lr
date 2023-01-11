@@ -1,6 +1,5 @@
-
-"./examples/assets/perf.mat" io.read_perf 0.25 * swap      ; output : loudness freq
+3 "./examples/assets/shaolinsi.perf" io.read_mat swap drop 0.25 * swap      ; output : loudness freq
 
 160 "SampleRate" @~ faust.osc.sawtooth  *           ; loudness * osc(freq)
 
-("SampleRate" @~ "test.wav" io.mono_wav)
+(1 "SampleRate" @~ "test.wav" io.write_wav)

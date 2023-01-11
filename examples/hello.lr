@@ -7,4 +7,4 @@
     
 %end
 
-440 osc 0.5 * ("SampleRate" @~ "test.wav" io.mono_wav)
+440 osc 0.5 * (1 "SampleRate" @~ "test.wav" io.write_wav)

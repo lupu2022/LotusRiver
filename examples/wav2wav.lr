@@ -1,6 +1,6 @@
 
 64 "./examples/assets/violin.wav" io.read_wav
 
-8 3 8 3 "./examples/assets/erhu.yaml" nn.wavenet
+8 3 8 3 "./examples/assets/suona.yaml" nn.wavenet
 
-("SampleRate" @~ "test.wav" io.mono_wav)
+(1 "SampleRate" @~ "test.wav" io.write_wav)
