@@ -6,12 +6,12 @@
 
 namespace lr { namespace io {
 
-struct PerfReader : public NativeWord {
-    PerfReader() {
+struct MatReader : public NativeWord {
+    MatReader() {
         in_sf = nullptr;
     }
 
-    virtual ~PerfReader() {
+    virtual ~MatReader() {
         if ( in_sf != nullptr ) {
             sf_close(in_sf);
         }
@@ -19,33 +19,30 @@ struct PerfReader : public NativeWord {
 
     virtual void run(Stack& stack) {
         const char* file_name = stack.pop_string();
+        const int dim = stack.pop_number();
 
         if ( in_sf == nullptr) {
             const int sr = 16000;
-            SF_INFO in_info = { sr, sr, 3, SF_FORMAT_MAT5 | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE, 0, 0};
+            SF_INFO in_info = { sr, sr, dim, SF_FORMAT_MAT5 | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE, 0, 0};
             in_sf = sf_open(file_name, SFM_READ, &in_info);
 
-            lr_assert(in_sf != nullptr , "Can't open perf file");
+            lr_assert(in_sf != nullptr , "Can't open mat file");
         }
 
-        float buf[3];
-        int count = sf_read_float(in_sf, buf, 3);
-        if ( count != 3) {
+        float buf[dim];
+        int count = sf_read_float(in_sf, buf, dim);
+        if ( count != dim) {
             sf_seek(in_sf, 0, SF_SEEK_SET);
-            stack.push_number(0);
-            stack.push_number(0);
-            return;
+            count = sf_read_float(in_sf, buf, dim);
+            lr_assert( count == dim, "Can't read data from mat");
         }
 
-        float p = buf[0];
-        //float c = buf[1];
-        float l = buf[2];
-
-        stack.push_number(p);
-        stack.push_number(l);
+        for ( int i = 0; i < dim; i++) {
+            stack.push_number( buf[i] );
+        }
     }
 
-    NWORD_CREATOR_DEFINE_LR(PerfReader)
+    NWORD_CREATOR_DEFINE_LR(MatReader)
 private:
     SNDFILE* in_sf;
 };
@@ -136,9 +133,10 @@ private:
     SNDFILE* out_sf;
 };
 
+
 void init_words(Enviroment& env) {
     env.insert_native_word("io.mono_wav", MonoWavOut::creator);
-    env.insert_native_word("io.read_perf", PerfReader::creator);
+    env.insert_native_word("io.read_mat", MatReader::creator);
     env.insert_native_word("io.read_wav", WavReader::creator);
 }
 
