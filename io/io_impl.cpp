@@ -146,14 +146,35 @@ struct MidiWord : public NativeWord {
     }
 
     virtual void run(Stack& stack) {
+        int port = stack.pop_number();
 
+        if ( midi_ == nullptr) {
+            try {
+                midi_ = new RtMidiIn();
+                midi_->setCallback(&MidiWord::midiHandler, (void*)this);
+                midi_->openPort(port);
+            }
+            catch (RtMidiError& error) {
+                error.printMessage();
+                lr_panic("Open MIDI input error!");
+            }
+        }
     }
+
+    static void midiHandler(double timeStamp, std::vector<unsigned char>* bytes, void* ptr);
 
     NWORD_CREATOR_DEFINE_LR(MidiWord)
 private:
     RtMidiIn* midi_;
 };
 
+void midiHandler(double timeStamp, std::vector<unsigned char>* bytes, void* ptr) {
+    /*
+    lupu::Runtime* rt = (lupu::Runtime *)ptr;
+    lupu::io::MidiMessage msg = lupu::io::MidiMessage::parse(bytes->data(), bytes->size());
+    rt->push_message(msg);
+    */
+}
 
 void init_words(Enviroment& env) {
     env.insert_native_word("io.write_wav", WavWriter::creator);
