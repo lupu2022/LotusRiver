@@ -135,11 +135,11 @@ private:
     SNDFILE* out_sf;
 };
 
-struct MidiWord : public NativeWord {
-    MidiWord() {
+struct MidiInWord : public NativeWord {
+    MidiInWord() {
         midi_ = nullptr;
     }
-    virtual ~MidiWord() {
+    virtual ~MidiInWord() {
         if ( midi_ != nullptr) {
             delete midi_;
         }
@@ -151,7 +151,7 @@ struct MidiWord : public NativeWord {
         if ( midi_ == nullptr) {
             try {
                 midi_ = new RtMidiIn();
-                midi_->setCallback(&MidiWord::midiHandler, (void*)this);
+                midi_->setCallback(&MidiInWord::midiHandler, (void*)this);
                 midi_->openPort(port);
             }
             catch (RtMidiError& error) {
@@ -163,23 +163,36 @@ struct MidiWord : public NativeWord {
 
     static void midiHandler(double timeStamp, std::vector<unsigned char>* bytes, void* ptr);
 
-    NWORD_CREATOR_DEFINE_LR(MidiWord)
+    NWORD_CREATOR_DEFINE_LR(MidiInWord)
 private:
     RtMidiIn* midi_;
+    Vec out_;
 };
 
-void midiHandler(double timeStamp, std::vector<unsigned char>* bytes, void* ptr) {
+void MidiInWord::midiHandler(double timeStamp, std::vector<unsigned char>* bytes, void* ptr) {
     /*
-    lupu::Runtime* rt = (lupu::Runtime *)ptr;
-    lupu::io::MidiMessage msg = lupu::io::MidiMessage::parse(bytes->data(), bytes->size());
-    rt->push_message(msg);
+    MidiInWord* wd = (MidiInWord *)ptr;
+    if ( wd->out_.size() != bytes->size() ) {
+        wd->out_ = Vec::Zero( bytes->size() , 1);
+    }
+    size_t sz = bytes->size();
+    TNT* d = wd->out_.data();
+    TNT* bd = bytes->data();
+    for (size_t i = 0; i < sz; i++) {
+        d[i] = bd[i];
+    }
     */
+
+    MidiInWord* wd = (MidiInWord *)ptr;
+    lr::io::MidiMessage msg = lr::io::MidiMessage::parse(bytes->data(), bytes->size());
 }
 
 void init_words(Enviroment& env) {
     env.insert_native_word("io.write_wav", WavWriter::creator);
     env.insert_native_word("io.read_mat", MatReader::creator);
     env.insert_native_word("io.read_wav", WavReader::creator);
+
+    env.insert_native_word("io.midi_in", MidiInWord::creator);
 }
 
 }}

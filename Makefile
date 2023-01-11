@@ -37,8 +37,7 @@ synth: synth.cpp lr.hpp io/io_impl.hpp nn/nn_impl.hpp faust/faust_impl.hpp \
 	faust_osc.o \
 	faust_reverb.o
 	g++ $(FLAGS) -c -o synth.o synth.cpp $(INC)
-	g++ $(FLAGS) -o $@ synth.o lr.o io_impl.o io_rtaudio.o io_rtmidi.o \
-					   nn_wavenet.o faust_osc.o faust_reverb.o $(LINK) 
+	g++ $(FLAGS) -o $@ synth.o lr.o io_impl.o io_rtaudio.o io_rtmidi.o nn_wavenet.o faust_osc.o faust_reverb.o $(LINK) 
 
 clean:
 	rm -f synth
