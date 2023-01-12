@@ -1,3 +1,7 @@
+#include <queue>
+#include <mutex>
+#include <atomic>
+#include <condition_variable>
 #include <sndfile.h>
 
 #include "io/io_impl.hpp"
@@ -159,14 +163,42 @@ struct MidiInWord : public NativeWord {
                 lr_panic("Open MIDI input error!");
             }
         }
+
+        MidiMessage msg = MidiMessage::null();
+        pop_message(msg);
+        stack.push_number(msg.value_);
     }
 
     static void midiHandler(double timeStamp, std::vector<unsigned char>* bytes, void* ptr);
 
     NWORD_CREATOR_DEFINE_LR(MidiInWord)
+
+private:
+     // message handler
+    void push_message(MidiMessage& message) {
+        msg_mutex_.lock();
+        msg_queue_.push(std::move(message));
+        msg_mutex_.unlock();
+    }
+
+    int pop_message(MidiMessage& message) {
+        if (msg_queue_.size() == 0) {
+            return 0;
+        }
+        msg_mutex_.lock();
+        message = msg_queue_.front();
+        msg_queue_.pop();
+        msg_mutex_.unlock();
+        return 1;
+    }
+
 private:
     RtMidiIn* midi_;
     Vec out_;
+
+    // MIDI control message
+    std::mutex msg_mutex_;
+    std::queue<io::MidiMessage> msg_queue_;
 };
 
 void MidiInWord::midiHandler(double timeStamp, std::vector<unsigned char>* bytes, void* ptr) {
@@ -185,6 +217,7 @@ void MidiInWord::midiHandler(double timeStamp, std::vector<unsigned char>* bytes
 
     MidiInWord* wd = (MidiInWord *)ptr;
     lr::io::MidiMessage msg = lr::io::MidiMessage::parse(bytes->data(), bytes->size());
+    wd->push_message(msg);
 }
 
 void init_words(Enviroment& env) {

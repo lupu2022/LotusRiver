@@ -375,7 +375,7 @@ using UserBinary = std::vector<WordByte>;
 struct Enviroment {
     using SettingValue = std::variant<bool, int, TNT>;
 
-    Enviroment(int sr, int bs = 32) {
+    Enviroment(int sr) {
         settings_["SampleRate"] = SettingValue(sr);
         load_base_math();
     }
@@ -851,6 +851,8 @@ private:
                             op = new BuiltinSet();
                         } else if ( code.str_ == "!~" ) {
                             op = new BuiltinStaticSet();
+                        } else if ( code.str_ == "sr" ) {
+                            op = new BuiltinSampleRate();
                         } else {
                             lr_panic("Find an unsupoorted builtin operator!");
                         }
@@ -945,6 +947,23 @@ private:
             }
             stack.pop_string();
             stack.pop();
+        }
+    };
+
+    struct BuiltinSampleRate : public BuiltinOperator {
+        int sr;
+        bool first;
+        BuiltinSampleRate() {
+            first = false;
+        }
+        virtual void run(Stack& stack, Hash& hash) {
+            if ( first == false) {
+                first = true;
+
+                auto value = hash.find("SampleRate");
+                sr = std::get<0>(value);
+            }
+            stack.push_number(sr);
         }
     };
 

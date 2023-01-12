@@ -59,6 +59,12 @@ union MidiMessage {
         uint16_t    d_;
     }d;
 
+    static MidiMessage null() {
+        MidiMessage msg;
+        msg.d.d_ = 0;
+        msg.type_ = Unknow;
+        return msg;
+    }
     static MidiMessage parse(unsigned char* data, size_t size) {
         MidiMessage msg;
         msg.d.d_ = 0;
